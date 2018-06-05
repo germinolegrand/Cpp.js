@@ -39,9 +39,12 @@
 		</Compiler>
 		<Unit filename="Lexer.cpp" />
 		<Unit filename="Lexer.h" />
+		<Unit filename="ParseTree.cpp" />
+		<Unit filename="ParseTree.h" />
 		<Unit filename="Parser.cpp" />
 		<Unit filename="Parser.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="tests.cpp" />
 		<Unit filename="var.cpp" />
 		<Unit filename="var.h" />
 		<Extensions>

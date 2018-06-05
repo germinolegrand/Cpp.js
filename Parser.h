@@ -124,21 +124,33 @@ public:
     {
         ParseTree(ParseResult result): result(result){}
 
-        void addChild(ParseTree&& child);
+        void addChild(std::unique_ptr<ParseTree>&& child);
 
         ParseResult result;
         ParseTree* parent = nullptr;
-        std::vector<ParseTree> children;
+        std::vector<std::unique_ptr<ParseTree>> children;
     };
 
     ParseTree parse();
 
 private:
+    bool parse_StatementExpression(ParseTree& tree);
+    bool parse_varDecl(ParseTree& tree);
+    bool parse_evaluationExpression(ParseTree& tree, int opr_precedence);
+    bool parse_operator(ParseTree& tree, int opr_precedence);
+    bool parse_Literal(ParseTree& tree);
+    bool parse_varUse(ParseTree& tree);
+
     Lexer& m_source;
 
     using Lexem = Lexer::Lexem;
 
-    void expected(Lexem expected, Lexem unexpected) noexcept(false);
+    std::vector<Lexem> m_current_unit;
+
+    Lexem lex();
+    void lex_putback(Lexem&& lxm);
+
+    [[noreturn]] void expected(Lexem expected, Lexem unexpected) noexcept(false);
 };
 
 inline std::ostream& operator<<(std::ostream& os, Parser::ParseResult const& parseResult)
@@ -164,35 +176,35 @@ inline std::ostream& operator<<(std::ostream& os, Parser::ParseResult const& par
 
     std::visit(Visitor{os}, parseResult);
 
-    return os << "Result";
+    return os;
 }
 
 inline std::ostream& operator<<(std::ostream& os, Parser::ParseTree const& tree)
 {
-    int level = 0;
-    Parser::ParseTree const* current_parent = nullptr;
-    Parser::ParseTree const* current = &tree;
-    while(true){
-        os << std::string(level, ' ') << "> " << current->result << '\n';
-        if(!current->children.empty()){
-            current_parent = current;
-            current = &*current->children.begin();
-            ++level;
-        } else {
-            if(current_parent == nullptr){
-                break;
-            }
-            ++current;
-            if(current == &*current_parent->children.end()){
-                if(current_parent->parent == nullptr){
-                    break;
-                }
-                current = current_parent;
-                current_parent = current->parent;
-                --level;
-            }
-        }
-    }
+//    os << "> " << current->result << '\n';
+//    int level = 1;
+//    Parser::ParseTree const* current_parent = &tree;
+//    auto current = current_parent->children.cbegin();
+//    while(level > 0){
+//        os << std::string(level, ' ') << "> " << (*current)->result << '\n';
+//        if(!(*current)->children.empty()){
+//            current_parent = current;
+//            current = current->children.begin()->get();
+//            ++level;
+//        } else {
+//            if(current_parent == nullptr){
+//                return os;
+//            }
+//            while(++current == &*current_parent->children.end()){
+//                if(current_parent->parent == nullptr){
+//                    return os;
+//                }
+//                current = current_parent;
+//                current_parent = current_parent->parent;
+//                --level;
+//            }
+//        }
+//    }
     return os;
 }
 

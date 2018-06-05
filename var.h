@@ -59,3 +59,15 @@ inline std::ostream& operator<<(std::ostream& os, var const& v)
     return os << v.to_string();
 }
 
+inline bool operator==(var const& a, std::string const& b){
+    return a.to_string() == b;
+}
+
+inline bool operator==(var const& a, double const& b){
+    return a.to_double() == b;
+}
+
+inline bool operator==(var const& a, var const& b){
+    return a.to_string() == b.to_string();
+}
+

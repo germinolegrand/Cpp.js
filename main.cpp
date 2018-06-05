@@ -1,3 +1,7 @@
+#define CATCH_CONFIG_MAIN
+#include <libs/catch.hpp>
+
+/*
 #include <iostream>
 
 #include "var.h"
@@ -33,3 +37,5 @@ int main()
 //        std::cout << lexem << std::endl;
 //    }
 }
+
+*/
