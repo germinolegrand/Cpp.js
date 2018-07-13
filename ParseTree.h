@@ -19,6 +19,12 @@ public:
     public:
         using NodeValue = std::conditional_t<Const, T const, T>;
 
+        using difference_type = size_t;
+        using value_type = NodeValue;
+        using pointer = NodeValue*;
+        using reference = NodeValue&;
+        using iterator_category = std::bidirectional_iterator_tag;
+
         NodeValue& operator*(){ return m_it->second; }
         NodeValue* operator->(){ return &m_it->second; }
         NodeBase& operator++();
@@ -45,6 +51,7 @@ public:
 
         NodeBase append(T&& child);
         NodeBase append(T const& child);
+        NodeBase append(NodeBase&& child);
         void clear_children();
         NodeBase remove();
         void skip_remove();
@@ -80,10 +87,21 @@ public:
     ParseTree(Node&&);
     ParseTree(ConstNode const&);
 
+    operator Node(){ return root(); }
+    operator ConstNode(){ return root(); }
+
     Node root();
     ConstNode root() const;
     bool empty() const;
     size_t size() const;
+
+    Node at();
+    template<class...Args>
+    Node at(size_t ind, Args...args);
+    ConstNode at(size_t...) const;
+
+    template<class U>
+    friend std::ostream& operator<<(std::ostream&, ParseTree<U> const&);
 
     void append(Node& parent, T&& child);
     void append(Node& parent, T const& child);
@@ -125,6 +143,29 @@ template<class T>
 size_t ParseTree<T>::size() const
 {
     return m_tree.size();
+}
+
+template<class T>
+auto ParseTree<T>::at() -> Node
+{
+    return root();
+}
+
+template<class T> template<class...Args>
+auto ParseTree<T>::at(size_t ind, Args...args) -> Node
+{
+    return std::next(at(args...).begin(), ind);
+}
+
+template<class T>
+std::ostream& operator<<(std::ostream& os, ParseTree<T> const& tree)
+{
+    int i = 0;
+    for(auto& [lweight, value] : tree.m_tree){
+        os << std::string(i, '`') << lweight << ':' << value << '\n';
+        i += lweight;
+    }
+    return os;
 }
 
 /// Manipulation
@@ -329,7 +370,56 @@ auto ParseTree<T>::NodeBase<Const>::append(T&& child) -> NodeBase
     auto it = m_tree->m_tree.emplace(endIt, dweight - 1, std::move(child));
 
     auto prevIt = std::prev(it);
-    prevIt->first -= it->first;
+    prevIt->first -= dweight - 1;
+
+    NodeBase ret{m_tree, it};
+    m_it = ret.parent().m_it;
+    return ret;
+}
+
+/**
+    @return the node of the appended child
+    @throw strong exception-garantee if MoveAssignation of T does not throw
+    @note child is wiped from the source tree by child.remove()
+**/
+template<class T> template<bool Const>
+auto ParseTree<T>::NodeBase<Const>::append(NodeBase&& child) -> NodeBase
+{
+    static_assert(!Const, "not possible on ConstNode");
+
+    auto childSrcBegIt = child.m_it;
+    auto childSrcEndIt = child.end().m_it;
+    auto childSrcSize = std::distance(childSrcBegIt, childSrcEndIt);
+    auto childSrcDeepWeight = child.deep_weight();
+
+    int const lweight = weight();
+    if(lweight <= 0){
+        auto it = m_tree->m_tree.insert(std::next(m_it),
+                                        std::make_move_iterator(childSrcBegIt),
+                                        std::make_move_iterator(childSrcEndIt));
+        child.remove();
+
+        auto lastChildDestIt = std::next(it, childSrcSize - 1);
+        lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + lweight - 1;
+
+        m_it = std::prev(it);
+        m_it->first = 1;
+        return {m_tree, it};
+    }
+
+    auto endIt = end().m_it;
+    int const dweight = deep_weight();
+
+    auto it = m_tree->m_tree.insert(endIt,
+                                    std::make_move_iterator(childSrcBegIt),
+                                    std::make_move_iterator(childSrcEndIt));
+    child.remove();
+
+    auto lastChildDestIt = std::next(it, childSrcSize - 1);
+    lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + dweight - 1;
+
+    auto prevIt = std::prev(it);
+    prevIt->first -= dweight - 1;
 
     NodeBase ret{m_tree, it};
     m_it = ret.parent().m_it;

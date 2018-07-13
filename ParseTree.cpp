@@ -1,5 +1,6 @@
 #include "ParseTree.h"
 
+#include <sstream>
 #include <libs/catch.hpp>
 
 TEST_CASE("ParseTree-NoRoot", "[ParseTree]"){
@@ -33,4 +34,31 @@ TEST_CASE("ParseTree-Root", "[ParseTree]"){
     CHECK(croot.contains(root) == false);
     CHECK(root.contains(croot) == false);
 
+}
+
+TEST_CASE("ParseTree-BasicTree", "[ParseTree]"){
+    ParseTree<std::string> tree("root");
+    tree.root().append("child0").append("child1").append("child2");
+    std::ostringstream os;
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+`1:child0
+``1:child1
+```-4:child2
+)");
+    os.str("");
+    CHECK(*tree.at(0,0,0) == "child2");
+    tree.at(0).append("child10");
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+`1:child0
+``1:child1
+```-1:child2
+``-3:child10
+)");
+    os.str("");
 }
