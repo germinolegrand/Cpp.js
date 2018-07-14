@@ -31,7 +31,10 @@ public:
         KWD_typeof,
         KWD_this,
         KWD_prototype,
-        KWD_undefined
+        KWD_undefined,
+        KWD_true,
+        KWD_false,
+        KWD_null,
     };
 
     static constexpr std::string_view KeywordStr[] =
@@ -47,7 +50,10 @@ public:
         "typeof"sv,
         "this"sv,
         "prototype"sv,
-        "undefined"sv
+        "undefined"sv,
+        "true"sv,
+        "false"sv,
+        "null"sv,
     };
 
     enum class Punctuator

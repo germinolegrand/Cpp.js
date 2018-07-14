@@ -130,7 +130,7 @@ bool Parser::parse_StatementIf(ParseNode tree)
     if(!parse_Statement(ifStm)){
         expected("Statement"s, lex());
     }
-    parse_StatementElse(tree);
+    parse_StatementElse(ifStm);
     return true;
 }
 
@@ -139,8 +139,7 @@ bool Parser::parse_StatementElse(ParseNode tree)
     if(!lex_expect_optional(Lexer::Keyword::KWD_else)){
         return false;
     }
-    auto elseStm = tree.append(Statement::STM_Else);
-    if(!parse_Statement(elseStm)){
+    if(!parse_Statement(tree)){
         expected("Statement"s, lex());
     }
     return true;
@@ -180,6 +179,7 @@ bool Parser::parse_evaluationExpression(ParseNode tree, int opr_precedence)
 
 bool Parser::parse_operator(ParseNode tree, int opr_precedence)
 {
+
     return false;
 }
 
@@ -189,6 +189,21 @@ bool Parser::parse_Literal(ParseNode tree)
     if(auto* lit = std::get_if<Lexer::Literal>(&lxm); lit){
         tree.append(ParseResult{std::move(*lit)});
         return true;
+    }
+    if(auto* lit = std::get_if<Lexer::Keyword>(&lxm); lit){
+        switch(*lit){
+        case Lexer::Keyword::KWD_true:
+            tree.append(true);
+            return true;
+        case Lexer::Keyword::KWD_false:
+            tree.append(false);
+            return true;
+        case Lexer::Keyword::KWD_null:
+            tree.append(nullptr);
+            return true;
+        default:
+            break;
+        }
     }
     lex_putback(std::move(lxm));
     return false;

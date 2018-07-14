@@ -25,8 +25,8 @@ public:
         using reference = NodeValue&;
         using iterator_category = std::bidirectional_iterator_tag;
 
-        NodeValue& operator*(){ return m_it->second; }
-        NodeValue* operator->(){ return &m_it->second; }
+        NodeValue& operator*(){ return get()->second; }
+        NodeValue* operator->(){ return &get()->second; }
         NodeBase& operator++();
         NodeBase& operator--();
 
@@ -47,7 +47,7 @@ public:
         bool empty() const;
         bool contains(NodeBase<true>) const;
         int depth() const;
-        int child_depth(NodeBase const&) const;
+        int child_depth(NodeBase<true>) const;
 
         NodeBase append(T&& child);
         NodeBase append(T const& child);
@@ -57,22 +57,27 @@ public:
         void skip_remove();
         void prune(NodeBase&);
 
-        NodeBase(NodeBase<false> const& other): m_tree(other.m_tree), m_it(other.m_it) {}
+        NodeBase(NodeBase<false> const& other): m_tree(other.m_tree), m_index(other.m_index) {}
 
     private:
         using Tree = std::conditional_t<Const,
-            ParseTree const,
-            ParseTree>;
+            decltype(ParseTree::m_tree) const,
+            decltype(ParseTree::m_tree)>;
         using TreeIterator = std::conditional_t<Const,
-            typename decltype(ParseTree::m_tree)::const_iterator,
-            typename decltype(ParseTree::m_tree)::iterator>;
+            typename Tree::const_iterator,
+            typename Tree::iterator>;
+        using TreeIndex = typename Tree::difference_type;
 
         Tree* m_tree;
-        TreeIterator m_it;
+        TreeIndex m_index;
+
+        TreeIterator get() const { return get(m_index); }
+        TreeIterator get(TreeIndex ind) const { return std::next(m_tree->begin(), ind); }
+        TreeIndex get_index(TreeIterator it) const { return std::distance(m_tree->begin(), it); }
 
         friend class ParseTree;
-        NodeBase(Tree& tree, TreeIterator it): m_tree(&tree), m_it(it) {}
-        NodeBase(Tree* tree, TreeIterator it): m_tree(tree), m_it(it) {}
+        NodeBase(Tree& tree, TreeIndex index): m_tree(&tree), m_index(index) {}
+        NodeBase(Tree* tree, TreeIndex index): m_tree(tree), m_index(index) {}
 
     public:
         int weight() const;
@@ -124,13 +129,13 @@ ParseTree<T>::ParseTree(T&& root)
 template<class T>
 auto ParseTree<T>::root() -> Node
 {
-    return {*this, m_tree.begin()};
+    return {m_tree, 0};
 }
 
 template<class T>
 auto ParseTree<T>::root() const -> ConstNode
 {
-    return {*this, m_tree.begin()};
+    return {m_tree, 0};
 }
 
 template<class T>
@@ -214,7 +219,7 @@ void ParseTree<T>::prune(Node& node)
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::operator++() -> NodeBase&
 {
-    for(auto i = 0; (i += (m_it++)->first) > 0;){
+    for(auto i = 0; (i += get(m_index++)->first) > 0;){
 
     }
     return *this;
@@ -223,7 +228,7 @@ auto ParseTree<T>::NodeBase<Const>::operator++() -> NodeBase&
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::operator--() -> NodeBase&
 {
-    for(auto i = 0; (i += (--m_it)->first) < 0;){
+    for(auto i = 0; (i += get(--m_index)->first) < 0;){
 
     }
     return *this;
@@ -232,13 +237,13 @@ auto ParseTree<T>::NodeBase<Const>::operator--() -> NodeBase&
 template<class T> template<bool Const>
 bool ParseTree<T>::NodeBase<Const>::operator==(NodeBase const& other) const
 {
-    return m_it == other.m_it;
+    return m_tree == other.m_tree && m_index == other.m_index;
 }
 
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::begin() const -> NodeBase
 {
-    return {m_tree, std::next(m_it)};
+    return {m_tree, m_index + 1};
 }
 
 template<class T> template<bool Const>
@@ -251,49 +256,45 @@ auto ParseTree<T>::NodeBase<Const>::end() const -> NodeBase
 template<class T> template<bool Const>
 bool ParseTree<T>::NodeBase<Const>::is_root() const
 {
-    return m_tree->m_tree.begin() == m_it;
+    return m_index == 0;
 }
 
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::root() const -> NodeBase
 {
-    return {m_tree, m_tree->m_tree.begin()};
+    return {m_tree, 0};
 }
 
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::parent() const -> NodeBase
 {
-    auto it = m_it;
-    for(auto i = 0; (i += (--it)->first) <= 0;){
+    auto index = m_index;
+    for(auto i = 0; (i += get(--index)->first) <= 0;){
 
     }
-    return {m_tree, it};
+    return {m_tree, index};
 }
 
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::previous_sibling() const -> NodeBase
 {
-    NodeBase previous{m_tree, m_it};
-    --previous;
-    return previous;
+    return std::prev(*this);
 }
 
 template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::next_sibling() const -> NodeBase
 {
-    NodeBase next{m_tree, m_it};
-    ++next;
-    return next;
+    return std::next(*this);
 }
 
 template<class T> template<bool Const>
 size_t ParseTree<T>::NodeBase<Const>::children() const
 {
-    auto it = m_it;
+    auto index = m_index;
 
     size_t count = 0;
 
-    for(int i = 0; (i += (it++)->first) > 0;){
+    for(int i = 0; (i += get(index++)->first) > 0;){
         if(i == 1){
             ++count;
         }
@@ -310,14 +311,17 @@ size_t ParseTree<T>::NodeBase<Const>::deep_size() const
 template<class T> template<bool Const>
 bool ParseTree<T>::NodeBase<Const>::empty() const
 {
-    return m_it->first < 1;
+    return get()->first < 1;
 }
 
 template<class T> template<bool Const>
 bool ParseTree<T>::NodeBase<Const>::contains(NodeBase<true> other) const
 {
-    return m_it < other.m_it
-        && other.m_it < std::next(m_it);
+    if(m_index >= other.m_index){
+        return false;
+    }
+
+    return child_depth(other) > 0;
 }
 
 template<class T> template<bool Const>
@@ -327,16 +331,16 @@ int ParseTree<T>::NodeBase<Const>::depth() const
 }
 
 /**
-    @return > 0 if `child` is a descendent of `*this`
+    @return depth > 0 if `child` is a descendent of `*this`
     @return 0 if `child` is `*this`
-    [!maychange] @return -1 if `child` is not a descendent of `*this`
+    @return anything < 0 if `child` is not a descendent of `*this`
 **/
 template<class T> template<bool Const>
-int ParseTree<T>::NodeBase<Const>::child_depth(NodeBase const& child) const
+int ParseTree<T>::NodeBase<Const>::child_depth(NodeBase<true> child) const
 {
     int i = 0;
-    auto it = m_it;
-    for(i = it->first; it != child.m_it && i > 0; i += (++it)->first){
+    auto index = m_index;
+    for(i = get(index)->first; index != child.m_index && i > 0; i += get(++index)->first){
 
     }
     return i;
@@ -347,6 +351,7 @@ int ParseTree<T>::NodeBase<Const>::child_depth(NodeBase const& child) const
 /// Manipulation
 
 /**
+    @note invalidates all iterators after insertion point
     @return the node of the appended child
     @throw strong exception-garantee
 **/
@@ -357,24 +362,20 @@ auto ParseTree<T>::NodeBase<Const>::append(T&& child) -> NodeBase
 
     int const lweight = weight();
     if(lweight <= 0){
-        auto it = m_tree->m_tree.emplace(std::next(m_it), lweight - 1, std::move(child));
-
-        m_it = std::prev(it);
-        m_it->first = 1;
-        return {m_tree, it};
+        auto it = m_tree->emplace(std::next(get()), lweight - 1, std::move(child));
+        get()->first = 1;
+        return {m_tree, get_index(it)};
     }
 
-    auto endIt = end().m_it;
+    auto endIndex = end().m_index;
     int const dweight = deep_weight();
 
-    auto it = m_tree->m_tree.emplace(endIt, dweight - 1, std::move(child));
+    auto it = m_tree->emplace(get(endIndex), dweight - 1, std::move(child));
 
     auto prevIt = std::prev(it);
     prevIt->first -= dweight - 1;
 
-    NodeBase ret{m_tree, it};
-    m_it = ret.parent().m_it;
-    return ret;
+    return {m_tree, get_index(it)};
 }
 
 /**
@@ -387,32 +388,31 @@ auto ParseTree<T>::NodeBase<Const>::append(NodeBase&& child) -> NodeBase
 {
     static_assert(!Const, "not possible on ConstNode");
 
-    auto childSrcBegIt = child.m_it;
-    auto childSrcEndIt = child.end().m_it;
+    auto childSrcBegIt = child.get(child.m_index);
+    auto childSrcEndIt = child.get(child.end().m_index);
     auto childSrcSize = std::distance(childSrcBegIt, childSrcEndIt);
     auto childSrcDeepWeight = child.deep_weight();
 
     int const lweight = weight();
     if(lweight <= 0){
-        auto it = m_tree->m_tree.insert(std::next(m_it),
-                                        std::make_move_iterator(childSrcBegIt),
-                                        std::make_move_iterator(childSrcEndIt));
+        auto it = m_tree->insert(std::next(get()),
+                                 std::make_move_iterator(childSrcBegIt),
+                                 std::make_move_iterator(childSrcEndIt));
         child.remove();
 
         auto lastChildDestIt = std::next(it, childSrcSize - 1);
         lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + lweight - 1;
 
-        m_it = std::prev(it);
-        m_it->first = 1;
-        return {m_tree, it};
+        get()->first = 1;
+        return {m_tree, get_index(it)};
     }
 
-    auto endIt = end().m_it;
+    auto endIt = get(end().m_index);
     int const dweight = deep_weight();
 
-    auto it = m_tree->m_tree.insert(endIt,
-                                    std::make_move_iterator(childSrcBegIt),
-                                    std::make_move_iterator(childSrcEndIt));
+    auto it = m_tree->insert(endIt,
+                             std::make_move_iterator(childSrcBegIt),
+                             std::make_move_iterator(childSrcEndIt));
     child.remove();
 
     auto lastChildDestIt = std::next(it, childSrcSize - 1);
@@ -421,9 +421,7 @@ auto ParseTree<T>::NodeBase<Const>::append(NodeBase&& child) -> NodeBase
     auto prevIt = std::prev(it);
     prevIt->first -= dweight - 1;
 
-    NodeBase ret{m_tree, it};
-    m_it = ret.parent().m_it;
-    return ret;
+    return {m_tree, get_index(it)};
 }
 
 /**
@@ -433,8 +431,8 @@ template<class T> template<bool Const>
 void ParseTree<T>::NodeBase<Const>::clear_children()
 {
     auto dweight = deep_weight();
-    m_tree->m_tree.erase(begin().m_it, end().m_it);
-    m_it->first = dweight;
+    m_tree->erase(get(begin().m_index), get(end().m_index));
+    get()->first = dweight;
 }
 
 /**
@@ -445,12 +443,12 @@ template<class T> template<bool Const>
 auto ParseTree<T>::NodeBase<Const>::remove() -> NodeBase
 {
     auto dweight = deep_weight();
-    auto it = m_tree->m_tree.erase(m_it, end().m_it);
-    if(it != m_tree->m_tree.begin() && dweight != 0){
+    auto it = m_tree->erase(get(), get(end().m_index));
+    if(it != m_tree->begin() && dweight != 0){
         auto before = std::prev(it);
         before->first += dweight;
     }
-    return {m_tree, it};
+    return {m_tree, get_index(it)};
 }
 
 /**
@@ -465,7 +463,7 @@ void ParseTree<T>::NodeBase<Const>::skip_remove()
         return;
     }
     auto dsize = deep_size();
-    auto frontIt = m_tree->m_tree.erase(m_it);
+    auto frontIt = m_tree->m_tree.erase(get());
     std::advance(frontIt, dsize - 1);
     frontIt->first -= lweight;
 }
@@ -473,18 +471,18 @@ void ParseTree<T>::NodeBase<Const>::skip_remove()
 template<class T> template<bool Const>
 void ParseTree<T>::NodeBase<Const>::prune(NodeBase& other)
 {
-    auto endIt = end().m_it;
-    auto otherEndIt = other.end().m_it;
+    auto endIt = get(end().m_index);
+    auto otherEndIt = get(other.end().m_index);
 
     int const dweight = deep_weight();
     int const otherDeepWeight = other.deep_weight();
 
-    auto it = std::move(other.m_it, otherEndIt, m_it);
-    auto resizeIt = std::move(endIt, m_tree->m_tree.end(), it);
+    auto it = std::move(get(other.m_index), otherEndIt, get());
+    auto resizeIt = std::move(endIt, m_tree->end(), it);
     m_tree->resize(std::distance(m_tree->begin(), resizeIt));
 
     std::prev(it)->first += otherDeepWeight - dweight;
-    other.m_it = m_it;
+    other.m_index = m_index;
 }
 
 /// Private
@@ -492,13 +490,13 @@ void ParseTree<T>::NodeBase<Const>::prune(NodeBase& other)
 template<class T> template<bool Const>
 int ParseTree<T>::NodeBase<Const>::weight() const
 {
-    return m_it->first;
+    return get()->first;
 }
 
 template<class T> template<bool Const>
 int ParseTree<T>::NodeBase<Const>::deep_weight() const
 {
-    return std::accumulate(begin().m_it, end().m_it, weight(), [](auto& init, auto& p){
+    return std::accumulate(get(begin().m_index), get(end().m_index), weight(), [](auto& init, auto& p){
         return init + p.first;
     });
 }

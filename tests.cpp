@@ -133,4 +133,45 @@ TEST_CASE("Parser", "[parser]"){
 >>-3:VarDecl(name:z)
 )Parser");
     }
+    SECTION("If statement"){
+        is.str("var x = 3; if(true){ var y = x; } var z;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-2:Literal(3.000000)
+>1:Statement(3:If)
+>>0:Literal(true)
+>>1:Statement(2:Block)
+>>>1:Statement(1:Expression)
+>>>>1:VarDecl(name:y)
+>>>>>-4:VarUse(name:x)
+>1:Statement(1:Expression)
+>>-3:VarDecl(name:z)
+)Parser");
+    }
+    SECTION("If-Else statement"){
+        is.str("if(true){ var y = x; } else { var x = 3; } var z;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(3:If)
+>>0:Literal(true)
+>>1:Statement(2:Block)
+>>>1:Statement(1:Expression)
+>>>>1:VarDecl(name:y)
+>>>>>-3:VarUse(name:x)
+>>1:Statement(2:Block)
+>>>1:Statement(1:Expression)
+>>>>1:VarDecl(name:x)
+>>>>>-4:Literal(3.000000)
+>1:Statement(1:Expression)
+>>-3:VarDecl(name:z)
+)Parser");
+    }
 }
