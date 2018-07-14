@@ -28,25 +28,14 @@ TEST_CASE("Var", "[var]"){
     var v = 2 < 1;
     os << v;
     CHECK(os.str() == "false");
-
-//
-//    Lexer lexer({
-//        []{ return std::cin.peek(); },
-//        []{ return std::cin.get(); }
-//    });
-//
-//    Parser parser(lexer);
-//
-//    auto tree = parser.parse();
-//
-//    std::cout << tree << std::endl;
 }
 
 TEST_CASE("Lexer", "[lexer]"){
     std::istringstream is{"var x = 3;"};
     Lexer lexer({
         [&is]{ return is.peek(); },
-        [&is]{ return is.get(); }
+        [&is]{ return is.get(); },
+        [&is]{ return is.peek() == decltype(is)::traits_type::eof(); }
     });
     std::ostringstream os;
     os << '\n' << lexer.lex()
@@ -65,20 +54,83 @@ Punctuator(;)
 }
 
 TEST_CASE("Parser", "[parser]"){
-    std::istringstream is{"var x = 3;"};
+    std::istringstream is;
+    std::ostringstream os;
     Lexer lexer({
         [&is]{ return is.peek(); },
-        [&is]{ return is.get(); }
+        [&is]{ return is.get(); },
+        [&is]{ return is.peek() == decltype(is)::traits_type::eof(); }
     });
     Parser parser{lexer};
-    auto tree = parser.parse();
 
-    std::ostringstream os;
-    os << '\n' << tree;
-    CHECK(os.str() == R"Parser(
-1:Statement(0)
-`1:Statement(0)
-``1:VarDecl(name:x)
-```-4:Literal(3.000000)
+    SECTION("Variable declaration"){
+        is.str("var x;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>-3:VarDecl(name:x)
 )Parser");
+    }
+    SECTION("Variable declaration and initiatization with literal"){
+        is.str("var x = 3;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-4:Literal(3.000000)
+)Parser");
+    }
+    SECTION("Variable declaration and initialization with other variable"){
+        is.str("var x = y;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-4:VarUse(name:y)
+)Parser");
+    }
+    SECTION("Multiple statements in translation unit"){
+        is.str("var x = 3; var y = x; var z;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-2:Literal(3.000000)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:y)
+>>>-2:VarUse(name:x)
+>1:Statement(1:Expression)
+>>-3:VarDecl(name:z)
+)Parser");
+    }
+    SECTION("Multiple statements and block in translation unit"){
+        is.str("var x = 3; { var y = x; } var z;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-2:Literal(3.000000)
+>1:Statement(2:Block)
+>>1:Statement(1:Expression)
+>>>1:VarDecl(name:y)
+>>>>-3:VarUse(name:x)
+>1:Statement(1:Expression)
+>>-3:VarDecl(name:z)
+)Parser");
+    }
 }

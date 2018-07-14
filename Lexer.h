@@ -15,6 +15,7 @@ public:
     {
         std::function<char()> peek;
         std::function<char()> consume;
+        std::function<bool()> eof;
     };
 
     enum class Keyword
@@ -112,6 +113,8 @@ public:
     Lexer(Source src);
 
     Lexem lex();
+
+    bool eof();
 
 private:
     Source m_source;

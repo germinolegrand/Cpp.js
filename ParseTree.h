@@ -162,7 +162,7 @@ std::ostream& operator<<(std::ostream& os, ParseTree<T> const& tree)
 {
     int i = 0;
     for(auto& [lweight, value] : tree.m_tree){
-        os << std::string(i, '`') << lweight << ':' << value << '\n';
+        os << std::string(i, '>') << lweight << ':' << value << '\n';
         i += lweight;
     }
     return os;
@@ -446,7 +446,7 @@ auto ParseTree<T>::NodeBase<Const>::remove() -> NodeBase
 {
     auto dweight = deep_weight();
     auto it = m_tree->m_tree.erase(m_it, end().m_it);
-    if(dweight != 0){
+    if(it != m_tree->m_tree.begin() && dweight != 0){
         auto before = std::prev(it);
         before->first += dweight;
     }

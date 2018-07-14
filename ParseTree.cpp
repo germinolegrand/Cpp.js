@@ -44,9 +44,9 @@ TEST_CASE("ParseTree-BasicTree", "[ParseTree]"){
     CHECK(os.str() ==
 R"(
 1:root
-`1:child0
-``1:child1
-```-4:child2
+>1:child0
+>>1:child1
+>>>-4:child2
 )");
     os.str("");
     CHECK(*tree.at(0,0,0) == "child2");
@@ -55,10 +55,10 @@ R"(
     CHECK(os.str() ==
 R"(
 1:root
-`1:child0
-``1:child1
-```-1:child2
-``-3:child10
+>1:child0
+>>1:child1
+>>>-1:child2
+>>-3:child10
 )");
     os.str("");
 }

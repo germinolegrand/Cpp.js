@@ -36,6 +36,11 @@ auto Lexer::lex() -> Lexem
     throw std::runtime_error("could not lex");
 }
 
+bool Lexer::eof()
+{
+    return m_source.eof();
+}
+
 auto Lexer::analyseKeyword() -> std::optional<Lexem>
 {
     auto ch = m_source.peek();

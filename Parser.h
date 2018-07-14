@@ -20,8 +20,9 @@ public:
 
     enum class Statement
     {
+        STM_TranslationUnit,
         STM_Expression,
-        STM_Compound,
+        STM_Block,
         STM_If,
         STM_Else,
         STM_While,
@@ -30,6 +31,21 @@ public:
         STM_Throw,
         STM_Catch,
         STM_Finally,
+    };
+
+    static constexpr std::string_view StatementStr[] =
+    {
+        "TranslationUnit"sv,
+        "Expression"sv,
+        "Block"sv,
+        "If"sv,
+        "Else"sv,
+        "While"sv,
+        "For"sv,
+        "Return"sv,
+        "Throw"sv,
+        "Catch"sv,
+        "Finally"sv,
     };
 
     enum class Operation
@@ -111,6 +127,8 @@ public:
 
     } opr;
 
+    static const std::unordered_map<Operation, std::string_view> OperationStr;
+
     using Literal = var;
 
     using ParseResult = std::variant<
@@ -121,24 +139,17 @@ public:
         Literal
     >;
 
-//    struct ParseTree
-//    {
-//        ParseTree(ParseResult result): result(result){}
-//
-//        void addChild(std::unique_ptr<ParseTree>&& child);
-//
-//        ParseResult result;
-//        ParseTree* parent = nullptr;
-//        std::vector<std::unique_ptr<ParseTree>> children;
-//    };
-
     using ParseTree = ::ParseTree<ParseResult>;
     using ParseNode = ParseTree::Node;
 
     ParseTree parse();
 
 private:
+    bool parse_Statement(ParseNode tree);
+    bool parse_StatementBlock(ParseNode tree);
     bool parse_StatementExpression(ParseNode tree);
+    bool parse_StatementIf(ParseNode tree);
+    bool parse_StatementElse(ParseNode tree);
     bool parse_varDecl(ParseNode tree);
     bool parse_evaluationExpression(ParseNode tree, int opr_precedence);
     bool parse_operator(ParseNode tree, int opr_precedence);
@@ -154,6 +165,9 @@ private:
     Lexem lex();
     void lex_putback(Lexem&& lxm);
 
+    bool lex_expect_optional(Lexem exp);
+    void lex_expect(Lexem exp);
+
     [[noreturn]] void expected(Lexem expected, Lexem unexpected) noexcept(false);
 };
 
@@ -168,10 +182,10 @@ inline std::ostream& operator<<(std::ostream& os, Parser::ParseResult const& par
             os << "VarUse(name:" << pr.name << ")";
         }
         void operator()(Parser::Statement const& pr){
-            os << "Statement(" << std::hex << fys::underlying_cast(pr) << std::dec << ")";
+            os << "Statement(" << std::hex << fys::underlying_cast(pr) << std::dec << ":" << Parser::StatementStr[fys::underlying_cast(pr)] << ")";
         }
         void operator()(Parser::Operation const& pr){
-            os << "Operation(" << std::hex << fys::underlying_cast(pr) << std::dec << ")";
+            os << "Operation(" << std::hex << fys::underlying_cast(pr) << std::dec << ":" << Parser::OperationStr.at(pr) << ")";
         }
         void operator()(Parser::Literal const& pr){
             os << "Literal(" << pr << ")";
@@ -182,33 +196,3 @@ inline std::ostream& operator<<(std::ostream& os, Parser::ParseResult const& par
 
     return os;
 }
-
-//inline std::ostream& operator<<(std::ostream& os, Parser::ParseTree const& tree)
-//{
-////    os << "> " << current->result << '\n';
-////    int level = 1;
-////    Parser::ParseTree const* current_parent = &tree;
-////    auto current = current_parent->children.cbegin();
-////    while(level > 0){
-////        os << std::string(level, ' ') << "> " << (*current)->result << '\n';
-////        if(!(*current)->children.empty()){
-////            current_parent = current;
-////            current = current->children.begin()->get();
-////            ++level;
-////        } else {
-////            if(current_parent == nullptr){
-////                return os;
-////            }
-////            while(++current == &*current_parent->children.end()){
-////                if(current_parent->parent == nullptr){
-////                    return os;
-////                }
-////                current = current_parent;
-////                current_parent = current_parent->parent;
-////                --level;
-////            }
-////        }
-////    }
-//    return os;
-//}
-
