@@ -125,6 +125,8 @@ public:
 
     } opr;
 
+    static auto precedence(Operation opr){ return fys::underlying_cast(opr) / 0x100; }
+
     static const std::unordered_map<Operation, std::string_view> OperationStr;
 
     using Literal = var;
@@ -143,6 +145,8 @@ public:
     ParseTree parse();
 
 private:
+    using Lexem = Lexer::Lexem;
+
     bool parse_Statement(ParseNode tree);
     bool parse_StatementBlock(ParseNode tree);
     bool parse_StatementExpression(ParseNode tree);
@@ -150,13 +154,13 @@ private:
     bool parse_StatementElse(ParseNode tree);
     bool parse_varDecl(ParseNode tree);
     bool parse_evaluationExpression(ParseNode tree, int opr_precedence);
-    bool parse_operator(ParseNode tree, int opr_precedence);
+    bool parse_Operation(ParseNode tree, int opr_precedence);
+    bool parse_prefixOperation(ParseNode tree, int opr_precedence);
+    bool parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     bool parse_Literal(ParseNode tree);
     bool parse_varUse(ParseNode tree);
 
     Lexer& m_source;
-
-    using Lexem = Lexer::Lexem;
 
     std::vector<Lexem> m_current_unit;
 

@@ -174,4 +174,99 @@ TEST_CASE("Parser", "[parser]"){
 >>-3:VarDecl(name:z)
 )Parser");
     }
+    SECTION("Member access point operation"){
+        is.str("var x = y.z;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1200:MemberAccess)
+>>>>0:VarUse(name:y)
+>>>>-5:Literal(z)
+)Parser");
+    }
+    SECTION("Member access bracket operation"){
+        is.str("var x = y[z];");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1200:MemberAccess)
+>>>>0:VarUse(name:y)
+>>>>-5:VarUse(name:z)
+)Parser");
+    }
+    SECTION("Member access multiple point operation"){
+        is.str("var x = a.b.c;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1200:MemberAccess)
+>>>>1:Operation(1200:MemberAccess)
+>>>>>0:VarUse(name:a)
+>>>>>-1:Literal(b)
+>>>>-5:Literal(c)
+)Parser");
+    }
+    SECTION("Call operation"){
+        is.str("var x = a.b().c();");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1100:Call)
+>>>>1:Operation(1200:MemberAccess)
+>>>>>1:Operation(1100:Call)
+>>>>>>1:Operation(1200:MemberAccess)
+>>>>>>>0:VarUse(name:a)
+>>>>>>>-2:Literal(b)
+>>>>>-6:Literal(c)
+)Parser");
+    }
+    SECTION("Postfix-prefix increment operation"){
+        is.str("var x = --!y++;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(f01:PrefixDecrement)
+>>>>1:Operation(f02:LogicalNot)
+>>>>>1:Operation(1000:PostfixIncrement)
+>>>>>>-7:VarUse(name:y)
+)Parser");
+    }
+    SECTION("Operations precedences"){
+        is.str("var x = --!y.z()++;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(f01:PrefixDecrement)
+>>>>1:Operation(f02:LogicalNot)
+>>>>>1:Operation(1000:PostfixIncrement)
+>>>>>>1:Operation(1100:Call)
+>>>>>>>1:Operation(1200:MemberAccess)
+>>>>>>>>0:VarUse(name:y)
+>>>>>>>>-9:Literal(z)
+)Parser");
+    }
 }

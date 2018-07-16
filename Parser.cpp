@@ -171,15 +171,110 @@ bool Parser::parse_evaluationExpression(ParseNode tree, int opr_precedence)
     if(parse_Literal(tree) || parse_varUse(tree)){
         ret = true;
     }
-    while(parse_operator(tree, opr_precedence)){
+    while(parse_Operation(tree, opr_precedence)){
         ret = true;
     }
     return ret;
 }
 
-bool Parser::parse_operator(ParseNode tree, int opr_precedence)
+bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
 {
+    if(tree.empty()){
+        return parse_prefixOperation(tree, opr_precedence);
+    }
 
+    auto previous = tree.last_child();
+
+    if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
+        previous.wrap(Operation::OPR_MemberAccess);
+        Lexem name = lex();
+        auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
+        if(!nameIdent){
+            expected(Lexer::Identifier{}, name);
+        }
+        previous.append(std::move(*nameIdent));
+        return true;
+    }
+    if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+        previous.wrap(Operation::OPR_MemberAccess);
+        if(!parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_MemberAccess) / 0x100)){
+            expected("EvaluationExpression"s, lex());
+        }
+        lex_expect(Lexer::Punctuator::PCT_bracket_right);
+        return true;
+    }
+
+    if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+        previous.wrap(Operation::OPR_Call);
+        if(parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_Call) / 0x100)){
+            while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
+                if(!parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_Call) / 0x100)){
+                    expected("EvaluationExpression"s, lex());
+                }
+            }
+        }
+        lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+        return true;
+    }
+
+    if(lex_expect_optional(Lexer::Punctuator::PCT_double_plus)){
+        Operation* opr = nullptr;
+        while((opr = std::get_if<Operation>(&*previous))
+              && precedence(*opr) < precedence(Operation::OPR_PostfixIncrement)){
+            previous = previous.last_child();
+        }
+        previous.wrap(Operation::OPR_PostfixIncrement);
+        return true;
+    }
+    if(lex_expect_optional(Lexer::Punctuator::PCT_double_minus)){
+        Operation* opr = nullptr;
+        while((opr = std::get_if<Operation>(&*previous))
+              && precedence(*opr) < precedence(Operation::OPR_PostfixDecrement)){
+            previous = previous.last_child();
+        }
+        previous.wrap(Operation::OPR_PostfixDecrement);
+        return true;
+    }
+
+    // parse postfix
+
+    return false;
+}
+
+bool Parser::parse_prefixOperation(ParseNode tree, int opr_precedence)
+{
+    if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+        auto operation = tree.append(Operation::OPR_Grouping);
+        if(!parse_evaluationExpression(operation, fys::underlying_cast(Operation::OPR_Grouping) / 0x100)){
+            expected("EvaluationExpression"s, lex());
+        }
+        lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+        return true;
+    }
+    if(parse_prefixUnaryOperation(Lexer::Punctuator::PCT_double_plus,  Operation::OPR_PrefixIncrement, tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_double_minus, Operation::OPR_PrefixDecrement, tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_not,          Operation::OPR_LogicalNot,      tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_tilde,        Operation::OPR_BitwiseNot,      tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_plus,         Operation::OPR_UnaryPlus,       tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_minus,        Operation::OPR_UnaryNegation,   tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Keyword::KWD_typeof,          Operation::OPR_Typeof,          tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Keyword::KWD_void,            Operation::OPR_Void,            tree, opr_precedence)
+    || parse_prefixUnaryOperation(Lexer::Keyword::KWD_delete,          Operation::OPR_Delete,          tree, opr_precedence)){
+        return true;
+    }
+
+    return false;
+}
+
+bool Parser::parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
+{
+    if(lex_expect_optional(lxm)){
+        auto operation = tree.append(opr);
+        if(!parse_evaluationExpression(operation, fys::underlying_cast(opr) / 0x100)){
+            expected("EvaluationExpression"s, lex());
+        }
+        return true;
+    }
     return false;
 }
 
