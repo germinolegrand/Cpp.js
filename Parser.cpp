@@ -170,87 +170,73 @@ bool Parser::parse_evaluationExpression(ParseNode tree, int opr_precedence)
     bool ret = false;
     if(parse_Literal(tree) || parse_varUse(tree)){
         ret = true;
+        opr_precedence = 0x100;
     }
     while(parse_Operation(tree, opr_precedence)){
         ret = true;
+        opr_precedence = 0x100;
     }
     return ret;
 }
 
 bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
 {
-    if(tree.empty()){
-        return parse_prefixOperation(tree, opr_precedence);
-    }
-
-    auto previous = tree.last_child();
-
-    if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
-        previous.wrap(Operation::OPR_MemberAccess);
-        Lexem name = lex();
-        auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
-        if(!nameIdent){
-            expected(Lexer::Identifier{}, name);
+    if(opr_precedence == 0){
+        if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+            auto operation = tree.append(Operation::OPR_Grouping);
+            if(!parse_evaluationExpression(operation, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+            lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+            return true;
         }
-        previous.append(std::move(*nameIdent));
-        return true;
-    }
-    if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
-        previous.wrap(Operation::OPR_MemberAccess);
-        if(!parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_MemberAccess) / 0x100)){
-            expected("EvaluationExpression"s, lex());
-        }
-        lex_expect(Lexer::Punctuator::PCT_bracket_right);
-        return true;
     }
 
-    if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
-        previous.wrap(Operation::OPR_Call);
-        if(parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_Call) / 0x100)){
-            while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
-                if(!parse_evaluationExpression(previous, fys::underlying_cast(Operation::OPR_Call) / 0x100)){
-                    expected("EvaluationExpression"s, lex());
+    if(!tree.empty()){
+        if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
+            auto previous = tree.last_child();
+            previous.wrap(Operation::OPR_MemberAccess);
+            Lexem name = lex();
+            auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
+            if(!nameIdent){
+                expected(Lexer::Identifier{}, name);
+            }
+            previous.append(std::move(*nameIdent));
+            return true;
+        }
+        if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+            auto previous = tree.last_child();
+            previous.wrap(Operation::OPR_MemberAccess);
+            if(!parse_evaluationExpression(previous, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+            lex_expect(Lexer::Punctuator::PCT_bracket_right);
+            return true;
+        }
+
+        if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+            auto previous = previousWrapPrecedence(tree, Operation::OPR_Call);
+            if(parse_evaluationExpression(previous, 0)){
+                while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
+                    if(!parse_evaluationExpression(previous, 0)){
+                        expected("EvaluationExpression"s, lex());
+                    }
                 }
             }
+            lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+            return true;
         }
-        lex_expect(Lexer::Punctuator::PCT_parenthese_right);
-        return true;
+
+        if(lex_expect_optional(Lexer::Punctuator::PCT_double_plus)){
+            previousWrapPrecedence(tree, Operation::OPR_PostfixIncrement);
+            return true;
+        }
+        if(lex_expect_optional(Lexer::Punctuator::PCT_double_minus)){
+            previousWrapPrecedence(tree, Operation::OPR_PostfixDecrement);
+            return true;
+        }
     }
 
-    if(lex_expect_optional(Lexer::Punctuator::PCT_double_plus)){
-        Operation* opr = nullptr;
-        while((opr = std::get_if<Operation>(&*previous))
-              && precedence(*opr) < precedence(Operation::OPR_PostfixIncrement)){
-            previous = previous.last_child();
-        }
-        previous.wrap(Operation::OPR_PostfixIncrement);
-        return true;
-    }
-    if(lex_expect_optional(Lexer::Punctuator::PCT_double_minus)){
-        Operation* opr = nullptr;
-        while((opr = std::get_if<Operation>(&*previous))
-              && precedence(*opr) < precedence(Operation::OPR_PostfixDecrement)){
-            previous = previous.last_child();
-        }
-        previous.wrap(Operation::OPR_PostfixDecrement);
-        return true;
-    }
-
-    // parse postfix
-
-    return false;
-}
-
-bool Parser::parse_prefixOperation(ParseNode tree, int opr_precedence)
-{
-    if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
-        auto operation = tree.append(Operation::OPR_Grouping);
-        if(!parse_evaluationExpression(operation, fys::underlying_cast(Operation::OPR_Grouping) / 0x100)){
-            expected("EvaluationExpression"s, lex());
-        }
-        lex_expect(Lexer::Punctuator::PCT_parenthese_right);
-        return true;
-    }
     if(parse_prefixUnaryOperation(Lexer::Punctuator::PCT_double_plus,  Operation::OPR_PrefixIncrement, tree, opr_precedence)
     || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_double_minus, Operation::OPR_PrefixDecrement, tree, opr_precedence)
     || parse_prefixUnaryOperation(Lexer::Punctuator::PCT_not,          Operation::OPR_LogicalNot,      tree, opr_precedence)
@@ -263,14 +249,76 @@ bool Parser::parse_prefixOperation(ParseNode tree, int opr_precedence)
         return true;
     }
 
+    if(!tree.empty()){
+        if(auto opr = std::get_if<Operation>(&*tree);
+           opr_precedence == 0 || !opr || precedence(*opr) < precedence(Operation::OPR_Multiplication)){
+            if(lex_expect_optional(Lexer::Punctuator::PCT_times)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Multiplication);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
+            if(lex_expect_optional(Lexer::Punctuator::PCT_divided)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Division);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
+            if(lex_expect_optional(Lexer::Punctuator::PCT_modulo)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Remainder);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
+        }
+
+        if(auto opr = std::get_if<Operation>(&*tree);
+           opr_precedence == 0 || !opr || precedence(*opr) < precedence(Operation::OPR_Addition)){
+            if(lex_expect_optional(Lexer::Punctuator::PCT_plus)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Addition);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
+            if(lex_expect_optional(Lexer::Punctuator::PCT_minus)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Substraction);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
+        }
+    }
+
+    // parse postfix
+
     return false;
+}
+
+auto Parser::previousWrapPrecedence(ParseNode tree, Operation operation) const -> ParseNode
+{
+    auto previous = tree.last_child();
+    Operation* opr = nullptr;
+    while((opr = std::get_if<Operation>(&*previous))
+          && precedence(*opr) < precedence(operation)) {
+        previous = previous.last_child();
+    }
+    previous.wrap(operation);
+    return previous;
 }
 
 bool Parser::parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
 {
+    if(opr_precedence > 0){
+        return false;
+    }
     if(lex_expect_optional(lxm)){
         auto operation = tree.append(opr);
-        if(!parse_evaluationExpression(operation, fys::underlying_cast(opr) / 0x100)){
+        if(!parse_evaluationExpression(operation, 0)){
             expected("EvaluationExpression"s, lex());
         }
         return true;

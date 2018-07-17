@@ -269,4 +269,46 @@ TEST_CASE("Parser", "[parser]"){
 >>>>>>>>-9:Literal(z)
 )Parser");
     }
+    SECTION("Addition/Multiplication precedences"){
+        is.str("var x = a + b * c % d - e / f;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(d01:Substraction)
+>>>>1:Operation(d00:Addition)
+>>>>>0:VarUse(name:a)
+>>>>>1:Operation(e02:Remainder)
+>>>>>>1:Operation(e00:Multiplication)
+>>>>>>>0:VarUse(name:b)
+>>>>>>>-1:VarUse(name:c)
+>>>>>>-2:VarUse(name:d)
+>>>>1:Operation(e01:Division)
+>>>>>0:VarUse(name:e)
+>>>>>-6:VarUse(name:f)
+)Parser");
+    }
+    SECTION("Multiple operations precedences"){
+        is.str("var x = a + b++ * !+c++;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(d00:Addition)
+>>>>0:VarUse(name:a)
+>>>>1:Operation(e00:Multiplication)
+>>>>>1:Operation(1000:PostfixIncrement)
+>>>>>>-1:VarUse(name:b)
+>>>>>1:Operation(f02:LogicalNot)
+>>>>>>1:Operation(f04:UnaryPlus)
+>>>>>>>1:Operation(1000:PostfixIncrement)
+>>>>>>>>-9:VarUse(name:c)
+)Parser");
+    }
 }
