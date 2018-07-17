@@ -37,6 +37,8 @@ public:
         KWD_true,
         KWD_false,
         KWD_null,
+        KWD_in,
+        KWD_instanceof
     };
 
     static constexpr std::string_view KeywordStr[] =
@@ -58,6 +60,8 @@ public:
         "true"sv,
         "false"sv,
         "null"sv,
+        "in"sv,
+        "instanceof"sv
     };
 
     enum class Punctuator

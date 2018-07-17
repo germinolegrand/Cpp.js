@@ -157,6 +157,7 @@ private:
     bool parse_evaluationExpression(ParseNode tree, int opr_precedence);
     bool parse_Operation(ParseNode tree, int opr_precedence);
     bool parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
+    bool parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     bool parse_Literal(ParseNode tree);
     bool parse_varUse(ParseNode tree);
 
