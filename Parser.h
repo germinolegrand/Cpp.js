@@ -70,8 +70,9 @@ public:
         OPR_Delete          = 0x0f08,
 
         OPR_Multiplication = 0x0e00,
-        OPR_Division       = 0x0e01,
-        OPR_Remainder      = 0x0e02,
+        OPR_Exponentiation = 0x0e01,
+        OPR_Division       = 0x0e02,
+        OPR_Remainder      = 0x0e03,
 
         OPR_Addition     = 0x0d00,
         OPR_Substraction = 0x0d01,

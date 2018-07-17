@@ -259,6 +259,13 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
                 }
                 return true;
             }
+            if(lex_expect_optional(Lexer::Punctuator::PCT_double_times)){
+                auto previous = previousWrapPrecedence(tree, Operation::OPR_Exponentiation);
+                if(!parse_evaluationExpression(previous, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+                return true;
+            }
             if(lex_expect_optional(Lexer::Punctuator::PCT_divided)){
                 auto previous = previousWrapPrecedence(tree, Operation::OPR_Division);
                 if(!parse_evaluationExpression(previous, 0)){
