@@ -311,4 +311,87 @@ TEST_CASE("Parser", "[parser]"){
 >>>>>>>>-9:VarUse(name:c)
 )Parser");
     }
+    SECTION("Exponentiation associativity"){
+        is.str("a ** 2 ** 3;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(e01:Exponentiation)
+>>>0:VarUse(name:a)
+>>>1:Operation(e01:Exponentiation)
+>>>>0:Literal(2.000000)
+>>>>-5:Literal(3.000000)
+)Parser");
+    }
+    SECTION("RL simple operations associativity"){
+        is.str("a = b = c += d;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(300:Assignment)
+>>>0:VarUse(name:a)
+>>>1:Operation(300:Assignment)
+>>>>0:VarUse(name:b)
+>>>>1:Operation(301:AdditionAssignment)
+>>>>>0:VarUse(name:c)
+>>>>>-6:VarUse(name:d)
+)Parser");
+    }
+    SECTION("RL complex operations associativity"){
+        is.str("x = a *= !b - c = !d;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(300:Assignment)
+>>>0:VarUse(name:x)
+>>>1:Operation(303:MultiplicationAssignment)
+>>>>0:VarUse(name:a)
+>>>>1:Operation(300:Assignment)
+>>>>>1:Operation(d01:Substraction)
+>>>>>>1:Operation(f02:LogicalNot)
+>>>>>>>-1:VarUse(name:b)
+>>>>>>-1:VarUse(name:c)
+>>>>>1:Operation(f02:LogicalNot)
+>>>>>>-7:VarUse(name:d)
+)Parser");
+    }
+    SECTION("Conditionnal operation associativity"){
+        is.str("x = a >= 3 ? 55 ^ 3 > '1000' ? e : f : b > 42 ? c : d;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(300:Assignment)
+>>>0:VarUse(name:x)
+>>>1:Operation(400:Conditional)
+>>>>1:Operation(b03:GreaterThanOrEqual)
+>>>>>0:VarUse(name:a)
+>>>>>-1:Literal(3.000000)
+>>>>1:Operation(400:Conditional)
+>>>>>1:Operation(800:BitwiseXOR)
+>>>>>>0:Literal(55.000000)
+>>>>>>1:Operation(b02:GreaterThan)
+>>>>>>>0:Literal(3.000000)
+>>>>>>>-2:Literal(1000)
+>>>>>0:VarUse(name:e)
+>>>>>-1:VarUse(name:f)
+>>>>1:Operation(400:Conditional)
+>>>>>1:Operation(b02:GreaterThan)
+>>>>>>0:VarUse(name:b)
+>>>>>>-1:Literal(42.000000)
+>>>>>0:VarUse(name:c)
+>>>>>-6:VarUse(name:d)
+)Parser");
+    }
 }

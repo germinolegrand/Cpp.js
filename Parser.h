@@ -89,7 +89,7 @@ public:
         OPR_InstanceOf         = 0x0b05,
 
         OPR_Equality         = 0x0a00,
-        OPR_InEquality       = 0x0a01,
+        OPR_Inequality       = 0x0a01,
         OPR_StrictEquality   = 0x0a02,
         OPR_StrictInequality = 0x0a03,
 
@@ -124,7 +124,7 @@ public:
 
         OPR_Comma = 0x0000//Reaaaaally not sure to include this one.
 
-    } opr;
+    };
 
     static auto precedence(Operation opr){ return fys::underlying_cast(opr) / 0x100; }
 
@@ -158,6 +158,7 @@ private:
     bool parse_Operation(ParseNode tree, int opr_precedence);
     bool parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     bool parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
+    std::optional<ParseNode> parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     bool parse_Literal(ParseNode tree);
     bool parse_varUse(ParseNode tree);
 

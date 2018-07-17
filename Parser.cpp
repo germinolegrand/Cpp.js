@@ -24,6 +24,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
     OPERATIONSTR(Void),
     OPERATIONSTR(Delete),
     OPERATIONSTR(Multiplication),
+    OPERATIONSTR(Exponentiation),
     OPERATIONSTR(Division),
     OPERATIONSTR(Remainder),
     OPERATIONSTR(Addition),
@@ -38,7 +39,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
     OPERATIONSTR(In),
     OPERATIONSTR(InstanceOf),
     OPERATIONSTR(Equality),
-    OPERATIONSTR(InEquality),
+    OPERATIONSTR(Inequality),
     OPERATIONSTR(StrictEquality),
     OPERATIONSTR(StrictInequality),
     OPERATIONSTR(BitwiseAND),
@@ -250,7 +251,7 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
     }
 
     if(parse_binaryLROperation(Lexer::Punctuator::PCT_times,        Operation::OPR_Multiplication, tree, opr_precedence)
-    || parse_binaryLROperation(Lexer::Punctuator::PCT_double_times, Operation::OPR_Exponentiation, tree, opr_precedence)///TODO: Exponentiation is RL-associative
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_double_times, Operation::OPR_Exponentiation, tree, opr_precedence)///TODO: Exponentiation is RL-associative
     || parse_binaryLROperation(Lexer::Punctuator::PCT_divided,      Operation::OPR_Division,       tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Punctuator::PCT_modulo,       Operation::OPR_Remainder,      tree, opr_precedence)){
         return true;
@@ -273,6 +274,43 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
     || parse_binaryLROperation(Lexer::Punctuator::PCT_greater_equal_than, Operation::OPR_GreaterThanOrEqual, tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Keyword::KWD_in,                    Operation::OPR_In,                 tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Keyword::KWD_instanceof,            Operation::OPR_InstanceOf,         tree, opr_precedence)){
+        return true;
+    }
+
+    if(parse_binaryLROperation(Lexer::Punctuator::PCT_double_equal,     Operation::OPR_Equality,         tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_not_equal,        Operation::OPR_Inequality,       tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_triple_equal,     Operation::OPR_StrictEquality,   tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_not_double_equal, Operation::OPR_StrictInequality, tree, opr_precedence)){
+        return true;
+    }
+
+    if(parse_binaryLROperation(Lexer::Punctuator::PCT_and,         Operation::OPR_BitwiseAND, tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_xor,         Operation::OPR_BitwiseXOR, tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_pipe,        Operation::OPR_BitwiseOR,  tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_double_and,  Operation::OPR_LogicalAND, tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_double_pipe, Operation::OPR_LogicalOR,  tree, opr_precedence)){
+        return true;
+    }
+
+    if(auto operation = parse_binaryRLOperation(Lexer::Punctuator::PCT_question, Operation::OPR_Conditional, tree, opr_precedence)){
+        lex_expect(Lexer::Punctuator::PCT_colon);
+        if(!parse_evaluationExpression(*operation, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
+    }
+
+    if(parse_binaryRLOperation(Lexer::Punctuator::PCT_equal,                Operation::OPR_Assignment,                   tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_plus_equal,           Operation::OPR_AdditionAssignment,           tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_minus_equal,          Operation::OPR_SubstractAssignment,          tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_times_equal,          Operation::OPR_MultiplicationAssignment,     tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_divided_equal,        Operation::OPR_DivisionAssignment,           tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_modulo_equal,         Operation::OPR_RemainderAssignment,          tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_double_lower_equal,   Operation::OPR_LeftShiftAssignment,          tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_double_greater_equal, Operation::OPR_RightShiftAssignment,         tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_triple_greater_equal, Operation::OPR_UnsignedRightShiftAssignment, tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_and_equal,            Operation::OPR_BitwiseANDAssignment,         tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_xor_equal,            Operation::OPR_BitwiseXORAssignment,         tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_pipe_equal,           Operation::OPR_BitwiseORAssignment,          tree, opr_precedence)){
         return true;
     }
 
@@ -327,6 +365,27 @@ bool Parser::parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, i
         expected("EvaluationExpression"s, lex());
     }
     return true;
+}
+
+auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence) -> std::optional<ParseNode>
+{
+    if(tree.empty()){
+        return std::nullopt;
+    }
+    if(opr_precedence > 0){
+        auto treeOpr = std::get_if<Operation>(&*tree);
+        if(treeOpr && precedence(*treeOpr) > precedence(opr)){
+            return std::nullopt;
+        }
+    }
+    if(!lex_expect_optional(lxm)){
+        return std::nullopt;
+    }
+    auto previous = previousWrapPrecedence(tree, opr);
+    if(!parse_evaluationExpression(previous, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    return previous;
 }
 
 bool Parser::parse_Literal(ParseNode tree)
