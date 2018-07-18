@@ -214,20 +214,31 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
             lex_expect(Lexer::Punctuator::PCT_bracket_right);
             return true;
         }
+    }
 
+    if(lex_expect_optional(Lexer::Keyword::KWD_new)){
+        auto operation = tree.append(Operation::OPR_New);
+        if(!parse_evaluationExpression(operation, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
         if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
-            auto previous = previousWrapPrecedence(tree, Operation::OPR_Call);
-            if(parse_evaluationExpression(previous, 0)){
+            if(parse_evaluationExpression(operation, 0)){
                 while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
-                    if(!parse_evaluationExpression(previous, 0)){
+                    if(!parse_evaluationExpression(operation, 0)){
                         expected("EvaluationExpression"s, lex());
                     }
                 }
             }
             lex_expect(Lexer::Punctuator::PCT_parenthese_right);
-            return true;
         }
+        return true;
+    }
 
+    if(parse_CallOperation(tree, opr_precedence)){
+        return true;
+    }
+
+    if(!tree.empty()){
         if(lex_expect_optional(Lexer::Punctuator::PCT_double_plus)){
             previousWrapPrecedence(tree, Operation::OPR_PostfixIncrement);
             return true;
@@ -251,7 +262,7 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
     }
 
     if(parse_binaryLROperation(Lexer::Punctuator::PCT_times,        Operation::OPR_Multiplication, tree, opr_precedence)
-    || parse_binaryRLOperation(Lexer::Punctuator::PCT_double_times, Operation::OPR_Exponentiation, tree, opr_precedence)///TODO: Exponentiation is RL-associative
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_double_times, Operation::OPR_Exponentiation, tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Punctuator::PCT_divided,      Operation::OPR_Division,       tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Punctuator::PCT_modulo,       Operation::OPR_Remainder,      tree, opr_precedence)){
         return true;
@@ -314,7 +325,18 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    // parse postfix
+    if(auto operation = parse_binaryRLOperation(Lexer::Keyword::KWD_yield, Operation::OPR_Yield, tree, opr_precedence)){
+        parse_evaluationExpression(*operation, 0);
+        return true;
+    }
+
+    if(parse_prefixUnaryOperation(Lexer::Punctuator::PCT_spread, Operation::OPR_Spread, tree, opr_precedence)){
+        return true;
+    }
+
+    if(parse_binaryLROperation(Lexer::Punctuator::PCT_comma, Operation::OPR_Comma, tree, opr_precedence)){
+        return true;
+    }
 
     return false;
 }
@@ -346,25 +368,25 @@ bool Parser::parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree
     return false;
 }
 
-bool Parser::parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
+auto Parser::parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence) -> std::optional<ParseNode>
 {
     if(tree.empty()){
-        return false;
+        return std::nullopt;
     }
     if(opr_precedence > 0){
         auto treeOpr = std::get_if<Operation>(&*tree);
         if(treeOpr && precedence(*treeOpr) >= precedence(opr)){
-            return false;
+            return std::nullopt;
         }
     }
     if(!lex_expect_optional(lxm)){
-        return false;
+        return std::nullopt;
     }
     auto previous = previousWrapPrecedence(tree, opr);
     if(!parse_evaluationExpression(previous, 0)){
         expected("EvaluationExpression"s, lex());
     }
-    return true;
+    return previous;
 }
 
 auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence) -> std::optional<ParseNode>
@@ -386,6 +408,32 @@ auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, i
         expected("EvaluationExpression"s, lex());
     }
     return previous;
+}
+
+bool Parser::parse_CallOperation(ParseNode tree, int opr_precedence)
+{
+    if(tree.empty()){
+        return false;
+    }
+    if(opr_precedence > 0){
+        auto treeOpr = std::get_if<Operation>(&*tree);
+        if(treeOpr && precedence(*treeOpr) > precedence(Operation::OPR_Call)){
+            return false;
+        }
+    }
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+        return false;
+    }
+    auto previous = previousWrapPrecedence(tree, Operation::OPR_Call);
+    if(parse_evaluationExpression(previous, 0)){
+        while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
+            if(!parse_evaluationExpression(previous, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+        }
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    return true;
 }
 
 bool Parser::parse_Literal(ParseNode tree)

@@ -394,4 +394,27 @@ TEST_CASE("Parser", "[parser]"){
 >>>>>-6:VarUse(name:d)
 )Parser");
     }
+    SECTION("New operation"){
+        is.str("var x = new carrot; var y = new banana(); var z = new apple(12, 34);");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1201:New)
+>>>>-3:VarUse(name:carrot)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:y)
+>>>1:Operation(1201:New)
+>>>>-3:VarUse(name:banana)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:z)
+>>>1:Operation(1201:New)
+>>>>0:VarUse(name:apple)
+>>>>0:Literal(12.000000)
+>>>>-5:Literal(34.000000)
+)Parser");
+    }
 }
