@@ -9,6 +9,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
 {
     OPERATIONSTR(Grouping),
     OPERATIONSTR(JsonObject),
+    OPERATIONSTR(ArrayObject),
     OPERATIONSTR(MemberAccess),
     OPERATIONSTR(New),
     OPERATIONSTR(Call),
@@ -182,55 +183,14 @@ bool Parser::parse_evaluationExpression(ParseNode tree, int opr_precedence)
 
 bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
 {
-    if(opr_precedence == 0){
-        if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
-            auto operation = tree.append(Operation::OPR_Grouping);
-            if(!parse_evaluationExpression(operation, 0)){
-                expected("EvaluationExpression"s, lex());
-            }
-            lex_expect(Lexer::Punctuator::PCT_parenthese_right);
-            return true;
-        }
+    if(parse_GroupingOperation(tree, opr_precedence)
+    || parse_JsonObjectOperation(tree, opr_precedence)
+    || parse_ArrayObjectOperation(tree, opr_precedence)){
+        return true;
     }
 
-    if(!tree.empty()){
-        if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
-            auto previous = tree.last_child();
-            previous.wrap(Operation::OPR_MemberAccess);
-            Lexem name = lex();
-            auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
-            if(!nameIdent){
-                expected(Lexer::Identifier{}, name);
-            }
-            previous.append(std::move(*nameIdent));
-            return true;
-        }
-        if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
-            auto previous = tree.last_child();
-            previous.wrap(Operation::OPR_MemberAccess);
-            if(!parse_evaluationExpression(previous, 0)){
-                expected("EvaluationExpression"s, lex());
-            }
-            lex_expect(Lexer::Punctuator::PCT_bracket_right);
-            return true;
-        }
-    }
-
-    if(lex_expect_optional(Lexer::Keyword::KWD_new)){
-        auto operation = tree.append(Operation::OPR_New);
-        if(!parse_evaluationExpression(operation, 0)){
-            expected("EvaluationExpression"s, lex());
-        }
-        if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
-            if(parse_evaluationExpression(operation, 0)){
-                while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
-                    if(!parse_evaluationExpression(operation, 0)){
-                        expected("EvaluationExpression"s, lex());
-                    }
-                }
-            }
-            lex_expect(Lexer::Punctuator::PCT_parenthese_right);
-        }
+    if(parse_MemberAccessOperation(tree, opr_precedence)
+    || parse_NewOperation(tree, opr_precedence)){
         return true;
     }
 
@@ -238,15 +198,9 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(!tree.empty()){
-        if(lex_expect_optional(Lexer::Punctuator::PCT_double_plus)){
-            previousWrapPrecedence(tree, Operation::OPR_PostfixIncrement);
-            return true;
-        }
-        if(lex_expect_optional(Lexer::Punctuator::PCT_double_minus)){
-            previousWrapPrecedence(tree, Operation::OPR_PostfixDecrement);
-            return true;
-        }
+    if(parse_postfixUnaryOperation(Lexer::Punctuator::PCT_double_plus,  Operation::OPR_PostfixIncrement, tree, opr_precedence)
+    || parse_postfixUnaryOperation(Lexer::Punctuator::PCT_double_minus, Operation::OPR_PostfixDecrement, tree, opr_precedence)){
+        return true;
     }
 
     if(parse_prefixUnaryOperation(Lexer::Punctuator::PCT_double_plus,  Operation::OPR_PrefixIncrement, tree, opr_precedence)
@@ -303,11 +257,8 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(auto operation = parse_binaryRLOperation(Lexer::Punctuator::PCT_question, Operation::OPR_Conditional, tree, opr_precedence)){
-        lex_expect(Lexer::Punctuator::PCT_colon);
-        if(!parse_evaluationExpression(*operation, 0)){
-            expected("EvaluationExpression"s, lex());
-        }
+    if(parse_ConditionalOperation(tree, opr_precedence)){
+        return false;
     }
 
     if(parse_binaryRLOperation(Lexer::Punctuator::PCT_equal,                Operation::OPR_Assignment,                   tree, opr_precedence)
@@ -325,8 +276,7 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(auto operation = parse_binaryRLOperation(Lexer::Keyword::KWD_yield, Operation::OPR_Yield, tree, opr_precedence)){
-        parse_evaluationExpression(*operation, 0);
+    if(parse_YieldOperation(tree, opr_precedence)){
         return true;
     }
 
@@ -351,6 +301,18 @@ auto Parser::previousWrapPrecedence(ParseNode tree, Operation operation) const -
     }
     previous.wrap(operation);
     return previous;
+}
+
+bool Parser::parse_postfixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
+{
+    if(tree.empty()){
+        return false;
+    }
+    if(!lex_expect_optional(lxm)){
+        return false;
+    }
+    previousWrapPrecedence(tree, opr);
+    return true;
 }
 
 bool Parser::parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
@@ -410,6 +372,116 @@ auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, i
     return previous;
 }
 
+bool Parser::parse_GroupingOperation(ParseNode tree, int opr_precedence)
+{
+    if(opr_precedence > 0){
+        return false;
+    }
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+        return false;
+    }
+    auto operation = tree.append(Operation::OPR_Grouping);
+    if(!parse_evaluationExpression(operation, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    return true;
+}
+
+bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
+{
+    if(opr_precedence > 0){
+        return false;
+    }
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+        return false;
+    }
+    auto operation = tree.append(Operation::OPR_JsonObject);
+    if(lex_expect_optional(Lexer::Punctuator::PCT_brace_left)){
+        return true;
+    }
+    do{
+//        if(!parse_evaluationExpression(operation, 0)){
+//            expected("EvaluationExpression"s, lex());
+//        }
+        lex_expect(Lexer::Punctuator::PCT_colon);
+        if(!parse_evaluationExpression(operation, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
+    }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
+    lex_expect(Lexer::Punctuator::PCT_brace_left);
+    return true;
+}
+
+bool Parser::parse_ArrayObjectOperation(ParseNode tree, int opr_precedence)
+{
+    if(opr_precedence > 0){
+        return false;
+    }
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+        return false;
+    }
+    auto operation = tree.append(Operation::OPR_ArrayObject);
+    do{
+        if(!parse_evaluationExpression(operation, 0)){
+            operation.append(var{});
+        }
+    }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
+    lex_expect(Lexer::Punctuator::PCT_bracket_left);
+    return true;
+}
+
+bool Parser::parse_MemberAccessOperation(ParseNode tree, int opr_precedence)
+{
+    if(tree.empty()){
+        return false;
+    }
+    if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
+        auto previous = tree.last_child();
+        previous.wrap(Operation::OPR_MemberAccess);
+        Lexem name = lex();
+        auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
+        if(!nameIdent){
+            expected(Lexer::Identifier{}, name);
+        }
+        previous.append(std::move(*nameIdent));
+        return true;
+    }
+    if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+        auto previous = tree.last_child();
+        previous.wrap(Operation::OPR_MemberAccess);
+        if(!parse_evaluationExpression(previous, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
+        lex_expect(Lexer::Punctuator::PCT_bracket_right);
+        return true;
+    }
+    return false;
+}
+
+bool Parser::parse_NewOperation(ParseNode tree, int opr_precedence)
+{
+    if(!lex_expect_optional(Lexer::Keyword::KWD_new)){
+        return false;
+    }
+    auto operation = tree.append(Operation::OPR_New);
+    if(!parse_evaluationExpression(operation, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+        return true;
+    }
+    if(parse_evaluationExpression(operation, 0)){
+        while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
+            if(!parse_evaluationExpression(operation, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+        }
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    return true;
+}
+
 bool Parser::parse_CallOperation(ParseNode tree, int opr_precedence)
 {
     if(tree.empty()){
@@ -433,6 +505,31 @@ bool Parser::parse_CallOperation(ParseNode tree, int opr_precedence)
         }
     }
     lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    return true;
+}
+
+bool Parser::parse_ConditionalOperation(ParseNode tree, int opr_precedence)
+{
+    if(auto operation = parse_binaryRLOperation(Lexer::Punctuator::PCT_question, Operation::OPR_Conditional, tree, opr_precedence)){
+        lex_expect(Lexer::Punctuator::PCT_colon);
+        if(!parse_evaluationExpression(*operation, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
+        return true;
+    }
+    return false;
+}
+
+bool Parser::parse_YieldOperation(ParseNode tree, int opr_precedence)
+{
+    if(opr_precedence > 0){
+        return false;
+    }
+    if(!lex_expect_optional(Lexer::Keyword::KWD_yield)){
+        return false;
+    }
+    auto previous = previousWrapPrecedence(tree, Operation::OPR_Yield);
+    parse_evaluationExpression(previous, 0);
     return true;
 }
 

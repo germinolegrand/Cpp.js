@@ -48,8 +48,9 @@ public:
 
     enum class Operation
     {
-        OPR_Grouping   = 0x1300,
-        OPR_JsonObject = 0x1301,
+        OPR_Grouping    = 0x1300,
+        OPR_JsonObject  = 0x1301,
+        OPR_ArrayObject = 0x1302,
 
         OPR_MemberAccess = 0x1200,
         OPR_New          = 0x1201,
@@ -153,13 +154,25 @@ private:
     bool parse_StatementExpression(ParseNode tree);
     bool parse_StatementIf(ParseNode tree);
     bool parse_StatementElse(ParseNode tree);
+
     bool parse_varDecl(ParseNode tree);
     bool parse_evaluationExpression(ParseNode tree, int opr_precedence);
+
     bool parse_Operation(ParseNode tree, int opr_precedence);
+    bool parse_postfixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     bool parse_prefixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     std::optional<ParseNode> parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
     std::optional<ParseNode> parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence);
+
+    bool parse_GroupingOperation(ParseNode tree, int opr_precedence);
+    bool parse_JsonObjectOperation(ParseNode tree, int opr_precedence);
+    bool parse_ArrayObjectOperation(ParseNode tree, int opr_precedence);
+    bool parse_MemberAccessOperation(ParseNode tree, int opr_precedence);
+    bool parse_NewOperation(ParseNode tree, int opr_precedence);
     bool parse_CallOperation(ParseNode tree, int opr_precedence);
+    bool parse_ConditionalOperation(ParseNode tree, int opr_precedence);
+    bool parse_YieldOperation(ParseNode tree, int opr_precedence);
+
     bool parse_Literal(ParseNode tree);
     bool parse_varUse(ParseNode tree);
 
