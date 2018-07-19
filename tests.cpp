@@ -417,4 +417,13 @@ TEST_CASE("Parser", "[parser]"){
 >>>>-5:Literal(34.000000)
 )Parser");
     }
+    SECTION("ArrayObject"){
+        is.str("var x = []; var y = [1]; var z = ['abc', 34, crap]; var w = [a, , , c, d, ]");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+
+)Parser");
+    }
 }

@@ -77,7 +77,7 @@ auto Parser::parse() -> ParseTree
 {
     ParseTree tree(Statement::STM_TranslationUnit);
 
-    while(!m_source.eof()){
+    while(!lex_expect_optional(Lexer::Symbol::SBL_EOF)){
         parse_Statement(tree);
     }
 
@@ -393,20 +393,49 @@ bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
     if(opr_precedence > 0){
         return false;
     }
-    if(!lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_brace_left)){
         return false;
     }
     auto operation = tree.append(Operation::OPR_JsonObject);
-    if(lex_expect_optional(Lexer::Punctuator::PCT_brace_left)){
+    if(lex_expect_optional(Lexer::Punctuator::PCT_brace_right)){
         return true;
     }
     do{
-//        if(!parse_evaluationExpression(operation, 0)){
-//            expected("EvaluationExpression"s, lex());
-//        }
-        lex_expect(Lexer::Punctuator::PCT_colon);
-        if(!parse_evaluationExpression(operation, 0)){
-            expected("EvaluationExpression"s, lex());
+        if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
+            if(!parse_evaluationExpression(operation, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+            lex_expect(Lexer::Punctuator::PCT_bracket_left);
+            lex_expect(Lexer::Punctuator::PCT_colon);
+            if(!parse_evaluationExpression(operation, 0)){
+                expected("EvaluationExpression"s, lex());
+            }
+        } else {
+            std::string name;
+            auto lxm = lex();
+            if(auto ident = std::get_if<Lexer::Identifier>(&lxm)){
+                name = *ident;
+            } else if(auto kwd = std::get_if<Lexer::Keyword>(&lxm)){
+                name = Lexer::KeywordStr[fys::underlying_cast(*kwd)];
+            } else {
+                expected("NameIdentifier"s, lxm);
+            }
+            operation.append(name);
+            if(lex_expect_optional(Lexer::Punctuator::PCT_colon)){
+                if(!parse_evaluationExpression(operation, 0)){
+                    expected("EvaluationExpression"s, lex());
+                }
+/*
+            } else if(lex_expect_optional(Lexer::Punctuator::PCT_parenthese_left)){
+                //parse function
+*/
+/*
+            } else if(name == "get" || name == "set"){
+                //parse accessors
+*/
+            } else {
+                operation.append(VarUse{name});
+            }
         }
     }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
     lex_expect(Lexer::Punctuator::PCT_brace_left);
@@ -427,7 +456,7 @@ bool Parser::parse_ArrayObjectOperation(ParseNode tree, int opr_precedence)
             operation.append(var{});
         }
     }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
-    lex_expect(Lexer::Punctuator::PCT_bracket_left);
+    lex_expect(Lexer::Punctuator::PCT_bracket_right);
     return true;
 }
 

@@ -8,8 +8,12 @@ Lexer::Lexer(Source src): m_source(std::move(src))
 
 auto Lexer::lex() -> Lexem
 {
-    while(!std::isgraph(m_source.peek())){
+    while(!std::isgraph(m_source.peek()) && !eof()){
         m_source.consume();
+    }
+
+    if(eof()){
+        return Symbol::SBL_EOF;
     }
 
     m_current_unit.clear();

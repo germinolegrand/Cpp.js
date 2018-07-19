@@ -180,12 +180,17 @@ public:
 
     using Literal = var;
 
+    enum class Symbol {
+        SBL_EOF
+    };
+
     using Lexem = std::variant
     <
         Keyword,
         Punctuator,
         Identifier,
-        Literal
+        Literal,
+        Symbol
     >;
 public:
     Lexer(Source src);
@@ -223,6 +228,8 @@ inline std::ostream& operator<<(std::ostream& os, Lexer::Lexem const& lxm)
         return os << "Identifier(" << *idt << ")";
     } else if(auto lit = std::get_if<Lexer::Literal>(&lxm)){
         return os << "Literal(" << *lit << ")";
+    } else if(auto sbl = std::get_if<Lexer::Symbol>(&lxm)){
+        return os << "Symbol(" << (*sbl == Lexer::Symbol::SBL_EOF ? "EndOfFile" : "undefined") << ")";
     }
     return os;
 }
