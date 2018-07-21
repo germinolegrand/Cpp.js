@@ -284,9 +284,9 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(parse_binaryLROperation(Lexer::Punctuator::PCT_comma, Operation::OPR_Comma, tree, opr_precedence)){
-        return true;
-    }
+//    if(parse_binaryLROperation(Lexer::Punctuator::PCT_comma, Operation::OPR_Comma, tree, opr_precedence)){
+//        return true;
+//    }
 
     return false;
 }
@@ -337,7 +337,7 @@ auto Parser::parse_binaryLROperation(Lexem lxm, Operation opr, ParseNode tree, i
     }
     if(opr_precedence > 0){
         auto treeOpr = std::get_if<Operation>(&*tree);
-        if(treeOpr && precedence(*treeOpr) >= precedence(opr)){
+        if(treeOpr && *treeOpr != Operation::OPR_Grouping && precedence(*treeOpr) >= precedence(opr)){
             return std::nullopt;
         }
     }
@@ -358,7 +358,7 @@ auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, i
     }
     if(opr_precedence > 0){
         auto treeOpr = std::get_if<Operation>(&*tree);
-        if(treeOpr && precedence(*treeOpr) > precedence(opr)){
+        if(treeOpr && *treeOpr != Operation::OPR_Grouping  && precedence(*treeOpr) > precedence(opr)){
             return std::nullopt;
         }
     }
@@ -402,10 +402,11 @@ bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
     }
     do{
         if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
-            if(!parse_evaluationExpression(operation, 0)){
+            auto prop = operation.append(Operation::OPR_Grouping);
+            if(!parse_evaluationExpression(prop, 0)){
                 expected("EvaluationExpression"s, lex());
             }
-            lex_expect(Lexer::Punctuator::PCT_bracket_left);
+            lex_expect(Lexer::Punctuator::PCT_bracket_right);
             lex_expect(Lexer::Punctuator::PCT_colon);
             if(!parse_evaluationExpression(operation, 0)){
                 expected("EvaluationExpression"s, lex());
@@ -417,12 +418,15 @@ bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
                 name = *ident;
             } else if(auto kwd = std::get_if<Lexer::Keyword>(&lxm)){
                 name = Lexer::KeywordStr[fys::underlying_cast(*kwd)];
+            } else if(auto lit = std::get_if<Lexer::Literal>(&lxm)){
+                name = (*lit).to_string();
             } else {
                 expected("NameIdentifier"s, lxm);
             }
             operation.append(name);
             if(lex_expect_optional(Lexer::Punctuator::PCT_colon)){
-                if(!parse_evaluationExpression(operation, 0)){
+                auto prop = operation.append(Operation::OPR_Grouping);
+                if(!parse_evaluationExpression(prop, 0)){
                     expected("EvaluationExpression"s, lex());
                 }
 /*
@@ -438,7 +442,7 @@ bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
             }
         }
     }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
-    lex_expect(Lexer::Punctuator::PCT_brace_left);
+    lex_expect(Lexer::Punctuator::PCT_brace_right);
     return true;
 }
 
@@ -449,6 +453,9 @@ bool Parser::parse_ArrayObjectOperation(ParseNode tree, int opr_precedence)
     }
     if(!lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
         return false;
+    }
+    if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_right)){
+        return true;
     }
     auto operation = tree.append(Operation::OPR_ArrayObject);
     do{

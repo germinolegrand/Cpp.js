@@ -418,12 +418,69 @@ TEST_CASE("Parser", "[parser]"){
 )Parser");
     }
     SECTION("ArrayObject"){
-        is.str("var x = []; var y = [1]; var z = ['abc', 34, crap]; var w = [a, , , c, d, ]");
+        is.str("var x = []; var y = [1]; var z = ['abc', 34, crap]; var w = [a, , , c, d, ];");
         auto tree = parser.parse();
 
         os << '\n' << tree;
         CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>-1:VarDecl(name:x)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:y)
+>>>1:Operation(1302:ArrayObject)
+>>>>-3:Literal(1.000000)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:z)
+>>>1:Operation(1302:ArrayObject)
+>>>>0:Literal(abc)
+>>>>0:Literal(34.000000)
+>>>>-3:VarUse(name:crap)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:w)
+>>>1:Operation(1302:ArrayObject)
+>>>>0:VarUse(name:a)
+>>>>0:Literal(undefined)
+>>>>0:Literal(undefined)
+>>>>0:VarUse(name:c)
+>>>>0:VarUse(name:d)
+>>>>-5:Literal(undefined)
+)Parser");
+    }
+    SECTION("JsonObject"){
+        is.str("var x = {}; var y = {banana:33+34, [f + g]:h}; var z = {'abc':'nooo', 34:42, crap};");
+        auto tree = parser.parse();
 
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>-2:Operation(1301:JsonObject)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:y)
+>>>1:Operation(1301:JsonObject)
+>>>>0:Literal(banana)
+>>>>1:Operation(1300:Grouping)
+>>>>>1:Operation(d00:Addition)
+>>>>>>0:Literal(33.000000)
+>>>>>>-2:Literal(34.000000)
+>>>>1:Operation(1300:Grouping)
+>>>>>1:Operation(d00:Addition)
+>>>>>>0:VarUse(name:f)
+>>>>>>-2:VarUse(name:g)
+>>>>-3:VarUse(name:h)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:z)
+>>>1:Operation(1301:JsonObject)
+>>>>0:Literal(abc)
+>>>>1:Operation(1300:Grouping)
+>>>>>-1:Literal(nooo)
+>>>>0:Literal(34.000000)
+>>>>1:Operation(1300:Grouping)
+>>>>>-1:Literal(42.000000)
+>>>>0:Literal(crap)
+>>>>-5:VarUse(name:crap)
 )Parser");
     }
 }
