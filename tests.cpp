@@ -483,4 +483,34 @@ TEST_CASE("Parser", "[parser]"){
 >>>>-5:VarUse(name:crap)
 )Parser");
     }
+    SECTION("JsonObject recursive"){
+        is.str("var x = {y:{a:33, b:34}, z:{c:35, d:36}};");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:x)
+>>>1:Operation(1301:JsonObject)
+>>>>0:Literal(y)
+>>>>1:Operation(1300:Grouping)
+>>>>>1:Operation(1301:JsonObject)
+>>>>>>0:Literal(a)
+>>>>>>1:Operation(1300:Grouping)
+>>>>>>>-1:Literal(33.000000)
+>>>>>>0:Literal(b)
+>>>>>>1:Operation(1300:Grouping)
+>>>>>>>-3:Literal(34.000000)
+>>>>0:Literal(z)
+>>>>1:Operation(1300:Grouping)
+>>>>>1:Operation(1301:JsonObject)
+>>>>>>0:Literal(c)
+>>>>>>1:Operation(1300:Grouping)
+>>>>>>>-1:Literal(35.000000)
+>>>>>>0:Literal(d)
+>>>>>>1:Operation(1300:Grouping)
+>>>>>>>-8:Literal(36.000000)
+)Parser");
+    }
 }

@@ -413,15 +413,17 @@ bool Parser::parse_JsonObjectOperation(ParseNode tree, int opr_precedence)
             }
         } else {
             std::string name;
-            auto lxm = lex();
-            if(auto ident = std::get_if<Lexer::Identifier>(&lxm)){
-                name = *ident;
-            } else if(auto kwd = std::get_if<Lexer::Keyword>(&lxm)){
-                name = Lexer::KeywordStr[fys::underlying_cast(*kwd)];
-            } else if(auto lit = std::get_if<Lexer::Literal>(&lxm)){
-                name = (*lit).to_string();
-            } else {
-                expected("NameIdentifier"s, lxm);
+            {
+                auto lxm = lex();
+                if(auto ident = std::get_if<Lexer::Identifier>(&lxm)){
+                    name = *ident;
+                } else if(auto kwd = std::get_if<Lexer::Keyword>(&lxm)){
+                    name = Lexer::KeywordStr[fys::underlying_cast(*kwd)];
+                } else if(auto lit = std::get_if<Lexer::Literal>(&lxm)){
+                    name = (*lit).to_string();
+                } else {
+                    expected("NameIdentifier"s, lxm);
+                }
             }
             operation.append(name);
             if(lex_expect_optional(Lexer::Punctuator::PCT_colon)){
