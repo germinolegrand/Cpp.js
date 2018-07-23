@@ -10,6 +10,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
     OPERATIONSTR(Grouping),
     OPERATIONSTR(JsonObject),
     OPERATIONSTR(ArrayObject),
+    OPERATIONSTR(Function),
     OPERATIONSTR(MemberAccess),
     OPERATIONSTR(New),
     OPERATIONSTR(Call),
@@ -78,7 +79,9 @@ auto Parser::parse() -> ParseTree
     ParseTree tree(Statement::STM_TranslationUnit);
 
     while(!lex_expect_optional(Lexer::Symbol::SBL_EOF)){
-        parse_Statement(tree);
+        if(!parse_Statement(tree)){
+            expected("Statement"s, lex());
+        }
     }
 
     return tree;
@@ -88,6 +91,9 @@ bool Parser::parse_Statement(ParseNode tree)
 {
     if(parse_StatementBlock(tree)
        || parse_StatementIf(tree)
+       || parse_StatementWhile(tree)
+       || parse_StatementDoWhile(tree)
+       || parse_StatementReturn(tree)
        || parse_StatementExpression(tree)){
         return true;
     }
@@ -110,7 +116,16 @@ bool Parser::parse_StatementExpression(ParseNode tree)
 {
     ParseTree expression(Statement::STM_Expression);
     if(parse_varDecl(expression) || parse_evaluationExpression(expression, 0)){
-        lex_expect(Lexer::Punctuator::PCT_semicolon);
+        if(!expression.empty()
+           && std::holds_alternative<Operation>(*expression.at(0))
+           && std::get<Operation>(*expression.at(0)) == Operation::OPR_Function
+           && expression.at().size() == 1){
+            if(!lex_expect_optional(Lexer::Punctuator::PCT_semicolon)){
+                *expression.at() = Statement::STM_Function;
+            }
+        } else {
+            lex_expect(Lexer::Punctuator::PCT_semicolon);
+        }
         tree.append(std::move(expression));
         return true;
     }
@@ -147,23 +162,67 @@ bool Parser::parse_StatementElse(ParseNode tree)
     return true;
 }
 
+bool Parser::parse_StatementWhile(ParseNode tree)
+{
+    if(!lex_expect_optional(Lexer::Keyword::KWD_while)){
+        return false;
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_left);
+    auto whileStm = tree.append(Statement::STM_While);
+    if(!parse_evaluationExpression(whileStm, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    if(!parse_Statement(whileStm)){
+        expected("Statement"s, lex());
+    }
+    return true;
+}
+
+bool Parser::parse_StatementDoWhile(ParseNode tree)
+{
+    if(!lex_expect_optional(Lexer::Keyword::KWD_do)){
+        return false;
+    }
+    auto whileStm = tree.append(Statement::STM_DoWhile);
+    if(!parse_Statement(whileStm)){
+        expected("Statement"s, lex());
+    }
+    lex_expect(Lexer::Keyword::KWD_while);
+    lex_expect(Lexer::Punctuator::PCT_parenthese_left);
+    if(!parse_evaluationExpression(whileStm, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    lex_expect(Lexer::Punctuator::PCT_semicolon);
+    return true;
+}
+
+bool Parser::parse_StatementReturn(ParseNode tree)
+{
+    if(!lex_expect_optional(Lexer::Keyword::KWD_return)){
+        return false;
+    }
+//    if(!tree.find_ascendant(Statement::STM_Function)){
+//        expected("Function"s, "Statement(Return)"s);
+//    }
+    auto statement = tree.append(Statement::STM_Return);
+    if(!parse_evaluationExpression(statement, 0)){
+        expected("EvaluationExpression"s, lex());
+    }
+    lex_expect(Lexer::Punctuator::PCT_semicolon);
+    return true;
+}
+
 bool Parser::parse_varDecl(ParseNode tree)
 {
     if(!lex_expect_optional(Lexer::Keyword::KWD_var)){
         return false;
     }
-
-    Lexem name = lex();
-    auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
-    if(!nameIdent){
-        expected(Lexer::Identifier{}, name);
-    }
-    auto varDeclNode = tree.append(ParseResult{VarDecl{std::move(*nameIdent)}});
-
+    auto varDeclNode = tree.append(VarDecl{lex_expect_identifier()});
     if(lex_expect_optional(Lexer::Punctuator::PCT_equal)){
         parse_evaluationExpression(varDeclNode, 0);
     }
-
     return true;
 }
 
@@ -185,7 +244,8 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
 {
     if(parse_GroupingOperation(tree, opr_precedence)
     || parse_JsonObjectOperation(tree, opr_precedence)
-    || parse_ArrayObjectOperation(tree, opr_precedence)){
+    || parse_ArrayObjectOperation(tree, opr_precedence)
+    || parse_FunctionOperation(tree, opr_precedence)){
         return true;
     }
 
@@ -258,7 +318,7 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
     }
 
     if(parse_ConditionalOperation(tree, opr_precedence)){
-        return false;
+        return true;
     }
 
     if(parse_binaryRLOperation(Lexer::Punctuator::PCT_equal,                Operation::OPR_Assignment,                   tree, opr_precedence)
@@ -469,6 +529,33 @@ bool Parser::parse_ArrayObjectOperation(ParseNode tree, int opr_precedence)
     return true;
 }
 
+bool Parser::parse_FunctionOperation(ParseNode tree, int opr_precedence)
+{
+    if(opr_precedence > 0){
+        return false;
+    }
+    if(!lex_expect_optional(Lexer::Keyword::KWD_function)){
+        return false;
+    }
+    auto operation = tree.append(Operation::OPR_Function);
+    if(auto ident = lex_expect_optional_identifier()){
+        operation.append(*ident);
+    } else {
+        operation.append(var{});
+    }
+    lex_expect(Lexer::Punctuator::PCT_parenthese_left);
+    if(!lex_expect_optional(Lexer::Punctuator::PCT_parenthese_right)){
+        do{
+            operation.append(lex_expect_identifier());
+        }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
+        lex_expect(Lexer::Punctuator::PCT_parenthese_right);
+    }
+    if(!parse_Statement(operation)){
+        expected("FunctionBody"s, lex());
+    }
+    return true;
+}
+
 bool Parser::parse_MemberAccessOperation(ParseNode tree, int opr_precedence)
 {
     if(tree.empty()){
@@ -477,12 +564,7 @@ bool Parser::parse_MemberAccessOperation(ParseNode tree, int opr_precedence)
     if(lex_expect_optional(Lexer::Punctuator::PCT_point)){
         auto previous = tree.last_child();
         previous.wrap(Operation::OPR_MemberAccess);
-        Lexem name = lex();
-        auto* nameIdent = std::get_if<Lexer::Identifier>(&name);
-        if(!nameIdent){
-            expected(Lexer::Identifier{}, name);
-        }
-        previous.append(std::move(*nameIdent));
+        previous.append(lex_expect_identifier());
         return true;
     }
     if(lex_expect_optional(Lexer::Punctuator::PCT_bracket_left)){
@@ -599,12 +681,10 @@ bool Parser::parse_Literal(ParseNode tree)
 
 bool Parser::parse_varUse(ParseNode tree)
 {
-    Lexem name = lex();
-    if(auto* nameIdent = std::get_if<Lexer::Identifier>(&name); nameIdent){
-        tree.append(ParseResult{VarUse{std::move(*nameIdent)}});
+    if(auto ident = lex_expect_optional_identifier()){
+        tree.append(VarUse{std::move(*ident)});
         return true;
     }
-    lex_putback(std::move(name));
     return false;
 }
 
@@ -625,6 +705,24 @@ void Parser::lex_putback(Lexem&& lxm)
     m_current_unit.push_back(std::move(lxm));
 }
 
+auto Parser::lex_expect_optional_identifier() -> std::optional<Lexer::Identifier>
+{
+    Lexem lxm = lex();
+    if(auto ident = std::get_if<Lexer::Identifier>(&lxm)){
+        return *ident;
+    }
+    lex_putback(std::move(lxm));
+    return std::nullopt;
+}
+
+auto Parser::lex_expect_identifier() -> Lexer::Identifier
+{
+    Lexem lxm = lex();
+    if(auto ident = std::get_if<Lexer::Identifier>(&lxm)){
+        return *ident;
+    }
+    expected(Lexer::Identifier{}, lxm);
+}
 
 bool Parser::lex_expect_optional(Lexem exp)
 {

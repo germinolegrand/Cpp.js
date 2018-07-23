@@ -513,4 +513,95 @@ TEST_CASE("Parser", "[parser]"){
 >>>>>>>-8:Literal(36.000000)
 )Parser");
     }
+    SECTION("While statement"){
+        is.str("while(x != 'yolo'){ x = 'yolo'; } var z = x;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(4:While)
+>>1:Operation(a01:Inequality)
+>>>0:VarUse(name:x)
+>>>-1:Literal(yolo)
+>>1:Statement(2:Block)
+>>>1:Statement(1:Expression)
+>>>>1:Operation(300:Assignment)
+>>>>>0:VarUse(name:x)
+>>>>>-4:Literal(yolo)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:z)
+>>>-4:VarUse(name:x)
+)Parser");
+    }
+    SECTION("DoWhile statement"){
+        is.str("do{ x = 'yolo'; } while(x != 'yolo'); var z = x;");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(5:DoWhile)
+>>1:Statement(2:Block)
+>>>1:Statement(1:Expression)
+>>>>1:Operation(300:Assignment)
+>>>>>0:VarUse(name:x)
+>>>>>-3:Literal(yolo)
+>>1:Operation(a01:Inequality)
+>>>0:VarUse(name:x)
+>>>-2:Literal(yolo)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:z)
+>>>-4:VarUse(name:x)
+)Parser");
+    }
+    SECTION("Function operation"){
+        is.str("var g = function(x){ x += 2; return x; }; g(3);");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:VarDecl(name:g)
+>>>1:Operation(1303:Function)
+>>>>0:Literal(undefined)
+>>>>0:Literal(x)
+>>>>1:Statement(2:Block)
+>>>>>1:Statement(1:Expression)
+>>>>>>1:Operation(301:AdditionAssignment)
+>>>>>>>0:VarUse(name:x)
+>>>>>>>-2:Literal(2.000000)
+>>>>>1:Statement(7:Return)
+>>>>>>-5:VarUse(name:x)
+>1:Statement(1:Expression)
+>>1:Operation(1100:Call)
+>>>0:VarUse(name:g)
+>>>-4:Literal(3.000000)
+)Parser");
+    }
+    SECTION("Function statement"){
+        is.str("function g(x){ x += 2; return x; } g(3);");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(8:Function)
+>>1:Operation(1303:Function)
+>>>0:Literal(g)
+>>>0:Literal(x)
+>>>1:Statement(2:Block)
+>>>>1:Statement(1:Expression)
+>>>>>1:Operation(301:AdditionAssignment)
+>>>>>>0:VarUse(name:x)
+>>>>>>-2:Literal(2.000000)
+>>>>1:Statement(7:Return)
+>>>>>-4:VarUse(name:x)
+>1:Statement(1:Expression)
+>>1:Operation(1100:Call)
+>>>0:VarUse(name:g)
+>>>-4:Literal(3.000000)
+)Parser");
+    }
 }

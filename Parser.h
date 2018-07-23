@@ -25,8 +25,10 @@ public:
         STM_Block,
         STM_If,
         STM_While,
+        STM_DoWhile,
         STM_For,
         STM_Return,
+        STM_Function,
         STM_Throw,
         STM_Catch,
         STM_Finally,
@@ -39,8 +41,10 @@ public:
         "Block"sv,
         "If"sv,
         "While"sv,
+        "DoWhile"sv,
         "For"sv,
         "Return"sv,
+        "Function"sv,
         "Throw"sv,
         "Catch"sv,
         "Finally"sv,
@@ -51,6 +55,7 @@ public:
         OPR_Grouping    = 0x1300,
         OPR_JsonObject  = 0x1301,
         OPR_ArrayObject = 0x1302,
+        OPR_Function    = 0x1303,
 
         OPR_MemberAccess = 0x1200,
         OPR_New          = 0x1201,
@@ -154,6 +159,9 @@ private:
     bool parse_StatementExpression(ParseNode tree);
     bool parse_StatementIf(ParseNode tree);
     bool parse_StatementElse(ParseNode tree);
+    bool parse_StatementWhile(ParseNode tree);
+    bool parse_StatementDoWhile(ParseNode tree);
+    bool parse_StatementReturn(ParseNode tree);
 
     bool parse_varDecl(ParseNode tree);
     bool parse_evaluationExpression(ParseNode tree, int opr_precedence);
@@ -167,6 +175,7 @@ private:
     bool parse_GroupingOperation(ParseNode tree, int opr_precedence);
     bool parse_JsonObjectOperation(ParseNode tree, int opr_precedence);
     bool parse_ArrayObjectOperation(ParseNode tree, int opr_precedence);
+    bool parse_FunctionOperation(ParseNode tree, int opr_precedence);
     bool parse_MemberAccessOperation(ParseNode tree, int opr_precedence);
     bool parse_NewOperation(ParseNode tree, int opr_precedence);
     bool parse_CallOperation(ParseNode tree, int opr_precedence);
@@ -185,6 +194,8 @@ private:
     Lexem lex();
     void lex_putback(Lexem&& lxm);
 
+    auto lex_expect_optional_identifier() -> std::optional<Lexer::Identifier>;
+    auto lex_expect_identifier() -> Lexer::Identifier;
     bool lex_expect_optional(Lexem exp);
     void lex_expect(Lexem exp);
 

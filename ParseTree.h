@@ -4,6 +4,7 @@
 #include <utility>
 #include <memory>
 #include <numeric>
+#include <optional>
 
 template<class T>
 class ParseTree
@@ -49,6 +50,9 @@ public:
         bool contains(NodeBase<true>) const;
         int depth() const;
         int child_depth(NodeBase<true>) const;
+
+        std::optional<NodeBase> find_descendant(T const&) const;
+        std::optional<NodeBase> find_ascendant(T const&) const;
 
         NodeBase append(T&& child);
         NodeBase append(T const& child);
