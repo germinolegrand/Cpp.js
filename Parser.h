@@ -30,6 +30,7 @@ public:
         STM_Return,
         STM_Function,
         STM_Throw,
+        STM_Try,
         STM_Catch,
         STM_Finally,
     };
@@ -46,6 +47,7 @@ public:
         "Return"sv,
         "Function"sv,
         "Throw"sv,
+        "Try"sv,
         "Catch"sv,
         "Finally"sv,
     };
