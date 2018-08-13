@@ -90,70 +90,72 @@ auto Interpreter::execute_Statement(Parser::ParseNode node) -> CompletionRecord
     case Statement::STM_Block:
         return execute_STM_Block(node);
     default:
-        break;
+        throw unavailable_operation();
     }
-    return {};
 }
 
 auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 {
     using Operation = Parser::Operation;
-//    switch(std::get<Operation>(*node)){
-//    case Operation::STM_TranslationUnit:
-//        return execute_STM_TranslationUnit(node);
-//    case Operation::STM_Expression:
-//        return execute_STM_Expression(node);
-//    case Operation::STM_Block:
-//        return execute_STM_Block(node);
-//    default:
-//        break;
-//    }
-    return {};
+    switch(std::get<Operation>(*node)){
+    case Operation::OPR_Grouping:
+        return execute_OPR_Grouping(node);
+    case Operation::OPR_JsonObject:
+        return execute_OPR_JsonObject(node);
+//    case Operation::OPR_ArrayObject:
+//        return execute_OPR_ArrayObject(node);
+//    case Operation::OPR_Function:
+//        return execute_OPR_Function(node);
+//    case Operation::OPR_MemberAccess:
+//        return execute_OPR_MemberAccess(node);
+    default:
+        throw unavailable_operation();
+    }
 }
 
 auto Interpreter::execute_VarUse(Parser::ParseNode node) -> CompletionRecord
 {
     auto& name = std::get<Parser::VarUse>(*node).name;
-    auto& variable = m_executionStack.top().environment[name];
+    auto& variable = context().environment[name];
     return {CompletionRecord::Type::Normal, variable, {}};
 }
 
 auto Interpreter::execute_VarDecl(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == m_executionStack.top().previousNode){
+    if(node.parent() == context().previousNode){
         if(node.empty()){
             auto& name = std::get<Parser::VarDecl>(*node).name;
-            auto& variable = m_executionStack.top().environment[name];
+            auto& variable = context().environment[name];
             return {CompletionRecord::Type::Normal, variable, {}};
         }
 
-        m_executionStack.top().currentNode = node.begin();
+        context().currentNode = node.begin();
         return {CompletionRecord::Type::Normal, {}, {}};
     }
 
     auto& name = std::get<Parser::VarDecl>(*node).name;
-    auto& variable = m_executionStack.top().environment[name];
+    auto& variable = context().environment[name];
     variable = movePreviousCalculated(node);
     return {CompletionRecord::Type::Normal, variable, {}};
 }
 
 auto Interpreter::execute_STM_TranslationUnit(Parser::ParseNode node) -> CompletionRecord
 {
-    if(m_executionStack.top().previousNode == node){
-        m_executionStack.top().currentNode = node.begin();
+    if(context().previousNode == node){
+        context().currentNode = node.begin();
         return CompletionRecord::Normal();
     }
-    m_executionStack.top().currentNode = std::next(m_executionStack.top().previousNode);
+    context().currentNode = std::next(context().previousNode);
 
-    movePreviousCalculated(node);
+    movePreviousCalculated(node, true);
 
     return CompletionRecord::Normal();
 }
 
 auto Interpreter::execute_STM_Expression(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == m_executionStack.top().previousNode){
-        m_executionStack.top().currentNode = node.begin();
+    if(node.parent() == context().previousNode){
+        context().currentNode = node.begin();
         return CompletionRecord::Normal();
     }
 
@@ -164,26 +166,73 @@ auto Interpreter::execute_STM_Expression(Parser::ParseNode node) -> CompletionRe
 
 auto Interpreter::execute_STM_Block(Parser::ParseNode node) -> CompletionRecord
 {
-    if(m_executionStack.top().previousNode == node){
-        m_executionStack.top().currentNode = node.begin();
+    if(node.parent() == context().previousNode){
+        if(!node.empty()){
+            context().currentNode = node.begin();
+        }
         return CompletionRecord::Normal();
     }
-    auto nextNode = std::next(m_executionStack.top().previousNode);
+    auto nextNode = std::next(context().previousNode);
     if(nextNode != node.end()){
-        m_executionStack.top().currentNode = nextNode;
+        context().currentNode = nextNode;
     } else {
         movePreviousCalculated(node);
     }
     return CompletionRecord::Normal();
 }
 
-var Interpreter::movePreviousCalculated(Parser::ParseNode node)
+auto Interpreter::execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord
 {
-    auto valueNodeHandle = m_executionStack.top().calculated.extract(m_executionStack.top().previousNode);
+    if(node.parent() == context().previousNode){
+        if(node.empty()){
+            return CompletionRecord::Normal();
+        }
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    auto nextNode = std::next(context().previousNode);
+    if(nextNode != node.end()){
+        context().currentNode = nextNode;
+        return CompletionRecord::Normal();
+    }
+    movePreviousCalculated(node);
+    return CompletionRecord::Normal();
+}
+
+auto Interpreter::execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord
+{
+    if(node.parent() == context().previousNode){
+        if(node.empty()){
+            return CompletionRecord::Normal(std::unordered_map<std::string, var>{});
+        }
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    auto nextNode = std::next(context().previousNode);
+    if(nextNode != node.end()){
+        context().currentNode = nextNode;
+        return CompletionRecord::Normal();
+    }
+    std::unordered_map<std::string, var> obj;
+    for(auto n = node.begin(); n != nextNode; ++n){
+        auto name = context().calculated.extract(n);
+        auto value = context().calculated.extract(++n);
+        obj.insert_or_assign(name.mapped().to_string(), std::move(value.mapped()));
+    }
+    return CompletionRecord::Normal(std::move(obj));
+}
+
+var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists)
+{
+    auto valueNodeHandle = context().calculated.extract(context().previousNode);
     if(!valueNodeHandle){
         return {};
     }
     valueNodeHandle.key() = node;
-    auto irt = m_executionStack.top().calculated.insert(std::move(valueNodeHandle));
+    auto irt = context().calculated.insert(std::move(valueNodeHandle));
+    if(!irt.inserted && replaceIfAlreadyExists){
+        context().calculated.erase(node);
+        context().calculated.insert(std::move(irt.node));
+    }
     return irt.position->second;
 }

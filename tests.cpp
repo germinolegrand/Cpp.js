@@ -638,4 +638,14 @@ TEST_CASE("Interpreter", "[interpreter]"){
 3.000000
 )Interpreter");
     }
+    SECTION("JsonObject simple"){
+        is.str("var x = {}; var y = {'abc':'nooo', 34:42, x};");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+{"x":{},"abc":"nooo","34.000000":42.000000}
+)Interpreter");
+    }
 }

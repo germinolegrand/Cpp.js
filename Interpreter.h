@@ -59,7 +59,12 @@ private:
     auto execute_STM_Expression(Parser::ParseNode node) -> CompletionRecord;
     auto execute_STM_Block(Parser::ParseNode node) -> CompletionRecord;
 
-    var movePreviousCalculated(Parser::ParseNode node);
+    auto execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord;
+
+    var movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists = false);
+
+    ExecutionContext& context(){ return m_executionStack.top(); }
 
     std::vector<Parser::ParseTree> m_parseTrees;
     std::stack<ExecutionContext> m_executionStack;
