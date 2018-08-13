@@ -1,0 +1,66 @@
+#pragma once
+
+#include "Parser.h"
+
+class Interpreter
+{
+public:
+    Interpreter();
+
+    void feed(Parser::ParseTree tree);
+
+    var execute();
+
+private:
+    struct CompletionRecord
+    {
+        enum class Type
+        {
+            Normal,
+            Break,
+            Continue,
+            Return,
+            Throw
+        };
+
+        Type type;
+        var value;
+        std::string target;
+
+        static CompletionRecord Normal(){ return {Type::Normal, {}, {}}; }
+        static CompletionRecord Normal(var v){ return {Type::Normal, std::move(v), {}}; }
+    };
+
+    struct Realm
+    {
+
+    };
+
+    struct ExecutionContext
+    {
+        Realm realm;
+        var function;
+        var environment;
+        Parser::ParseNode code;
+        Parser::ParseNode currentNode;
+        Parser::ParseNode previousNode;
+        std::unordered_map<Parser::ParseNode, var, Parser::ParseNode::Hash> calculated;
+    };
+
+    auto execute_step() -> CompletionRecord;
+
+    auto execute_Node(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_Statement(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_Operation(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_VarUse(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_VarDecl(Parser::ParseNode node) -> CompletionRecord;
+
+    auto execute_STM_TranslationUnit(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_Expression(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_Block(Parser::ParseNode node) -> CompletionRecord;
+
+    var movePreviousCalculated(Parser::ParseNode node);
+
+    std::vector<Parser::ParseTree> m_parseTrees;
+    std::stack<ExecutionContext> m_executionStack;
+};

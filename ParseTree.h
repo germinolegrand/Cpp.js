@@ -66,6 +66,11 @@ public:
 
         NodeBase(NodeBase<false> const& other): m_tree(other.m_tree), m_index(other.m_index) {}
 
+        struct Hash
+        {
+            size_t operator()(NodeBase const& node) const { return std::hash<decltype(&*node.get())>()(&*node.get()); }
+        };
+
     private:
         using Tree = std::conditional_t<Const,
             decltype(ParseTree::m_tree) const,
@@ -555,3 +560,4 @@ int ParseTree<T>::NodeBase<Const>::deep_weight() const
         return init + p.first;
     });
 }
+
