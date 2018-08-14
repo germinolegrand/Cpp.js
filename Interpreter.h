@@ -61,6 +61,11 @@ private:
 
     auto execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord;
+
+    auto resolveBinding(std::string const& name, var environment = {}) -> var*;
+    auto resolveMemberAccessNode(Parser::ParseNode node) -> var*;
 
     var movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists = false);
 

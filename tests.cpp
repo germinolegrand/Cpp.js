@@ -648,4 +648,14 @@ TEST_CASE("Interpreter", "[interpreter]"){
 {"x":{},"abc":"nooo","34.000000":42.000000}
 )Interpreter");
     }
+    SECTION("MemberAccess Assignment"){
+        is.str("var x = 'foo'; x = {a:4}; x.b = x.a; x.a = 5; x;");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+{"b":4.000000,"a":5.000000}
+)Interpreter");
+    }
 }

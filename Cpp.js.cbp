@@ -37,6 +37,8 @@
 			<Add option="-std=c++17" />
 			<Add directory="C:/Users/germinolegrand/Documents/dev/" />
 		</Compiler>
+		<Unit filename="Interpreter.cpp" />
+		<Unit filename="Interpreter.h" />
 		<Unit filename="Lexer.cpp" />
 		<Unit filename="Lexer.h" />
 		<Unit filename="ParseTree.cpp" />

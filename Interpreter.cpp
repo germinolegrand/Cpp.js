@@ -106,8 +106,19 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_ArrayObject(node);
 //    case Operation::OPR_Function:
 //        return execute_OPR_Function(node);
-//    case Operation::OPR_MemberAccess:
-//        return execute_OPR_MemberAccess(node);
+    case Operation::OPR_MemberAccess:
+        return execute_OPR_MemberAccess(node);
+//    case Operation::OPR_New:
+//        return execute_OPR_New(node);
+//    case Operation::OPR_Call:
+//        return execute_OPR_Call(node);
+//    case Operation::OPR_PostfixIncrement:
+//        return execute_OPR_PostfixIncrement(node);
+//    case Operation::OPR_PostfixDecrement:
+//        return execute_OPR_PostfixDecrement(node);
+
+    case Operation::OPR_Assignment:
+        return execute_OPR_Assignment(node);
     default:
         throw unavailable_operation();
     }
@@ -222,6 +233,114 @@ auto Interpreter::execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRe
     return CompletionRecord::Normal(std::move(obj));
 }
 
+auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord
+{
+    if(node.parent() == context().previousNode){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(context().previousNode);
+        return CompletionRecord::Normal();
+    }
+    if(auto* opr = std::get_if<Parser::Operation>(&*node.parent());
+       opr && *opr == Parser::Operation::OPR_Assignment
+       && node.parent().begin() == node){
+        return CompletionRecord::Normal();
+    }
+    auto* memberPtr = resolveMemberAccessNode(node);
+    if(!memberPtr){
+        return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+    }
+    context().calculated.erase(node);
+    if(!memberPtr->is_undefined()){
+        context().calculated.try_emplace(node, *memberPtr);
+    }
+    return CompletionRecord::Normal(*memberPtr);
+}
+
+auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord
+{
+    if(node.parent() == context().previousNode){
+        auto lhsNode = node.begin();
+        if(std::holds_alternative<Parser::VarUse>(*lhsNode)){
+            context().currentNode = std::next(lhsNode);
+            return CompletionRecord::Normal();
+        }
+        if(auto* operation = std::get_if<Parser::Operation>(&*lhsNode)){
+            if(*operation == Parser::Operation::OPR_MemberAccess){
+                context().currentNode = lhsNode;
+                return CompletionRecord::Normal();
+            }
+            if(*operation == Parser::Operation::OPR_JsonObject){
+                context().currentNode = std::next(lhsNode);
+                return CompletionRecord::Normal();
+            }
+            if(*operation == Parser::Operation::OPR_ArrayObject){
+                context().currentNode = std::next(lhsNode);
+                return CompletionRecord::Normal();
+            }
+        }
+        throw std::invalid_argument("Expected VarUse or Operation(OPR_MemberAccess|OPR_JsonObject|OPR_ArrayObject) as LeftHandSideExpression in OPR_Assignment");
+    }
+    //If lhs was OPR_MemberAccess, evaluate rhs
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(context().previousNode);
+        return CompletionRecord::Normal();
+    }
+
+    auto rhs = context().calculated.extract(context().previousNode);
+
+    auto lhsNode = node.begin();
+    if(auto* varUse = std::get_if<Parser::VarUse>(&*lhsNode)){
+        auto lshPtr = resolveBinding(varUse->name);
+        if(!lshPtr){
+            return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+        }
+        *lshPtr = rhs.mapped();
+        return CompletionRecord::Normal(*lshPtr);
+    }
+    if(auto* operation = std::get_if<Parser::Operation>(&*lhsNode)){
+        if(*operation == Parser::Operation::OPR_MemberAccess){
+            auto lshPtr = resolveMemberAccessNode(lhsNode);
+            if(!lshPtr){
+                return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+            }
+            *lshPtr = rhs.mapped();
+            return CompletionRecord::Normal(*lshPtr);
+        }
+        if(*operation == Parser::Operation::OPR_JsonObject){
+            throw unavailable_operation();
+        }
+        if(*operation == Parser::Operation::OPR_ArrayObject){
+            throw unavailable_operation();
+        }
+    }
+
+    throw std::logic_error("Unreachable code line was reached!");
+}
+
+auto Interpreter::resolveBinding(std::string const& name, var environment) -> var*
+{
+    if(environment.is_undefined()){
+        environment = context().environment;
+    }
+    return &environment[name];
+}
+
+auto Interpreter::resolveMemberAccessNode(Parser::ParseNode node) -> var*
+{
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    if(lhs.empty() || rhs.empty()){
+        return nullptr;
+    }
+    lhs.key() = node;
+    context().calculated.erase(node);
+    auto irt = context().calculated.insert(std::move(lhs));
+    return &irt.position->second[rhs.mapped()];
+}
+
 var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists)
 {
     auto valueNodeHandle = context().calculated.extract(context().previousNode);
@@ -229,10 +348,9 @@ var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAl
         return {};
     }
     valueNodeHandle.key() = node;
-    auto irt = context().calculated.insert(std::move(valueNodeHandle));
-    if(!irt.inserted && replaceIfAlreadyExists){
+    if(replaceIfAlreadyExists){
         context().calculated.erase(node);
-        context().calculated.insert(std::move(irt.node));
     }
+    auto irt = context().calculated.insert(std::move(valueNodeHandle));
     return irt.position->second;
 }
