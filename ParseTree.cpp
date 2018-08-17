@@ -1,7 +1,7 @@
 #include "ParseTree.h"
 
 #include <sstream>
-#include <libs/catch.hpp>
+#include <catch2/catch.hpp>
 
 TEST_CASE("ParseTree-NoRoot", "[ParseTree]"){
     ParseTree<std::string> tree;
