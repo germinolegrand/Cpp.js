@@ -363,7 +363,7 @@ auto Parser::previousWrapPrecedence(ParseNode tree, Operation operation) const -
     return previous;
 }
 
-bool Parser::parse_postfixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int opr_precedence)
+bool Parser::parse_postfixUnaryOperation(Lexem lxm, Operation opr, ParseNode tree, int /*opr_precedence*/)
 {
     if(tree.empty()){
         return false;
@@ -556,7 +556,7 @@ bool Parser::parse_FunctionOperation(ParseNode tree, int opr_precedence)
     return true;
 }
 
-bool Parser::parse_MemberAccessOperation(ParseNode tree, int opr_precedence)
+bool Parser::parse_MemberAccessOperation(ParseNode tree, int /*opr_precedence*/)
 {
     if(tree.empty()){
         return false;
@@ -579,7 +579,7 @@ bool Parser::parse_MemberAccessOperation(ParseNode tree, int opr_precedence)
     return false;
 }
 
-bool Parser::parse_NewOperation(ParseNode tree, int opr_precedence)
+bool Parser::parse_NewOperation(ParseNode tree, int /*opr_precedence*/)
 {
     if(!lex_expect_optional(Lexer::Keyword::KWD_new)){
         return false;

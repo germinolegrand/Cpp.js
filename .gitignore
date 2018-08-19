@@ -1,4 +1,2 @@
-*.depend
-*.layout
-/bin/
-/obj/
+/build/*
+!/build/premake5*

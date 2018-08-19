@@ -66,7 +66,7 @@ auto Lexer::analysePunctuator() -> std::optional<Lexem>
     int count = 0;
     for(auto& punc : PunctuatorStr){
         if(punc == m_current_unit){
-            exactMatch = &punc - std::begin(PunctuatorStr);
+            exactMatch = static_cast<int>(&punc - std::begin(PunctuatorStr));
             ++count;
         } else if(punc.size() > m_current_unit.size()
                   && punc.compare(0, m_current_unit.size(), m_current_unit) == 0
