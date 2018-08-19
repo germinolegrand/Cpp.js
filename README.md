@@ -1,3 +1,9 @@
+Cpp.js is a project with no pretention. It aims to be a JS interpreter in a C++ environment. The JS environment should be highly and easily manipulable from simple modern C++.
+
+Currently it is still in an early stage. The Parser is advanced enough to support a basic Interpreter.
+
+You will find examples in `src/tests.cpp`.
+
 # Build
 
 For Code::Blocks (see https://github.com/chris-be/premake-codeblocks):
