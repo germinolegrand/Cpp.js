@@ -37,7 +37,7 @@ auto Lexer::lex() -> Lexem
         m_current_unit += current_char;
     }
 
-    throw std::runtime_error("could not lex");
+    throw std::invalid_argument("Impossible to lex current unit (" + m_current_unit + ")");
 }
 
 bool Lexer::eof()
@@ -146,7 +146,8 @@ auto Lexer::analyseLiteralString() -> std::optional<Lexem>
     auto quote_ch = m_source.consume();
     bool escaped = false;
     char ch = 0;
-    while((ch = m_source.peek()) != quote_ch || escaped){
+    bool endOfFile = false;
+    while(!(endOfFile = eof()) && ((ch = m_source.peek()) != quote_ch || escaped)){
         if(escaped){
             switch(ch)
             {
@@ -177,6 +178,9 @@ auto Lexer::analyseLiteralString() -> std::optional<Lexem>
         } else {
             ret += m_source.consume();
         }
+    }
+    if(endOfFile){
+        throw std::invalid_argument("Unexpected EOF while lexing Literal string");
     }
     m_source.consume();
     return std::make_optional(var(std::move(ret)));

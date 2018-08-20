@@ -11,6 +11,15 @@ public:
 
     var execute();
 
+    class unimplemented_error: public std::runtime_error
+    {
+    public:
+        explicit unimplemented_error(std::string const& what_arg): runtime_error(what_arg){}
+        explicit unimplemented_error(const char* what_arg): runtime_error(what_arg){}
+        explicit unimplemented_error(Parser::Statement stm): runtime_error(std::string(Parser::StatementStr[fys::underlying_cast(stm)])){}
+        explicit unimplemented_error(Parser::Operation opr): runtime_error(std::string(Parser::OperationStr.at(opr))){}
+    };
+
 private:
     struct CompletionRecord
     {

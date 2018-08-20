@@ -55,8 +55,12 @@ auto Interpreter::execute_step() -> CompletionRecord
         parentCtx.calculated.insert_or_assign(parentCtx.currentNode, cr.value);
         parentCtx.previousNode = parentCtx.currentNode;
         parentCtx.currentNode = parentCtx.currentNode.parent();
-    } else {
-        throw unavailable_operation();
+    } else if(cr.type == CompletionRecord::Type::Break) {
+        throw unimplemented_error("CompletionRecord::Type::Break");
+    } else if(cr.type == CompletionRecord::Type::Continue) {
+        throw unimplemented_error("CompletionRecord::Type::Continue");
+    } else if(cr.type == CompletionRecord::Type::Throw) {
+        throw unimplemented_error("CompletionRecord::Type::Throw");
     }
     return cr;
 }
@@ -90,7 +94,7 @@ auto Interpreter::execute_Statement(Parser::ParseNode node) -> CompletionRecord
     case Statement::STM_Block:
         return execute_STM_Block(node);
     default:
-        throw unavailable_operation();
+        throw unimplemented_error(std::get<Statement>(*node));
     }
 }
 
@@ -116,11 +120,106 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_PostfixIncrement(node);
 //    case Operation::OPR_PostfixDecrement:
 //        return execute_OPR_PostfixDecrement(node);
-
+//    case Operation::OPR_PrefixIncrement:
+//        return execute_OPR_PrefixIncrement(node);
+//    case Operation::OPR_PrefixDecrement:
+//        return execute_OPR_PrefixDecrement(node);
+//    case Operation::OPR_LogicalNot:
+//        return execute_OPR_LogicalNot(node);
+//    case Operation::OPR_BitwiseNot:
+//        return execute_OPR_BitwiseNot(node);
+//    case Operation::OPR_UnaryPlus:
+//        return execute_OPR_UnaryPlus(node);
+//    case Operation::OPR_UnaryNegation:
+//        return execute_OPR_UnaryNegation(node);
+//    case Operation::OPR_Typeof:
+//        return execute_OPR_Typeof(node);
+//    case Operation::OPR_Void:
+//        return execute_OPR_Void(node);
+//    case Operation::OPR_Delete:
+//        return execute_OPR_Delete(node);
+//    case Operation::OPR_Multiplication:
+//        return execute_OPR_Multiplication(node);
+//    case Operation::OPR_Exponentiation:
+//        return execute_OPR_Exponentiation(node);
+//    case Operation::OPR_Division:
+//        return execute_OPR_Division(node);
+//    case Operation::OPR_Remainder:
+//        return execute_OPR_Remainder(node);
+//    case Operation::OPR_Addition:
+//        return execute_OPR_Addition(node);
+//    case Operation::OPR_Substraction:
+//        return execute_OPR_Substraction(node);
+//    case Operation::OPR_BitwiseLeftShift:
+//        return execute_OPR_BitwiseLeftShift(node);
+//    case Operation::OPR_BitwiseRightShift:
+//        return execute_OPR_BitwiseRightShift(node);
+//    case Operation::OPR_BitwiseUnsignedRightShift:
+//        return execute_OPR_BitwiseUnsignedRightShift(node);
+//    case Operation::OPR_LessThan:
+//        return execute_OPR_LessThan(node);
+//    case Operation::OPR_LessThanOrEqual:
+//        return execute_OPR_LessThanOrEqual(node);
+//    case Operation::OPR_GreaterThan:
+//        return execute_OPR_GreaterThan(node);
+//    case Operation::OPR_GreaterThanOrEqual:
+//        return execute_OPR_GreaterThanOrEqual(node);
+//    case Operation::OPR_In:
+//        return execute_OPR_In(node);
+//    case Operation::OPR_InstanceOf:
+//        return execute_OPR_InstanceOf(node);
+//    case Operation::OPR_Equality:
+//        return execute_OPR_Equality(node);
+//    case Operation::OPR_Inequality:
+//        return execute_OPR_Inequality(node);
+//    case Operation::OPR_StrictEquality:
+//        return execute_OPR_StrictEquality(node);
+//    case Operation::OPR_StrictInequality:
+//        return execute_OPR_StrictInequality(node);
+//    case Operation::OPR_BitwiseAND:
+//        return execute_OPR_BitwiseAND(node);
+//    case Operation::OPR_BitwiseXOR:
+//        return execute_OPR_BitwiseXOR(node);
+//    case Operation::OPR_BitwiseOR:
+//        return execute_OPR_BitwiseOR(node);
+//    case Operation::OPR_LogicalAND:
+//        return execute_OPR_LogicalAND(node);
+//    case Operation::OPR_LogicalOR:
+//        return execute_OPR_LogicalOR(node);
+//    case Operation::OPR_Conditional:
+//        return execute_OPR_Conditional(node);
     case Operation::OPR_Assignment:
         return execute_OPR_Assignment(node);
+//    case Operation::OPR_AdditionAssignment:
+//        return execute_OPR_AdditionAssignment(node);
+//    case Operation::OPR_SubstractAssignment:
+//        return execute_OPR_SubstractAssignment(node);
+//    case Operation::OPR_MultiplicationAssignment:
+//        return execute_OPR_MultiplicationAssignment(node);
+//    case Operation::OPR_DivisionAssignment:
+//        return execute_OPR_DivisionAssignment(node);
+//    case Operation::OPR_RemainderAssignment:
+//        return execute_OPR_RemainderAssignment(node);
+//    case Operation::OPR_LeftShiftAssignment:
+//        return execute_OPR_LeftShiftAssignment(node);
+//    case Operation::OPR_RightShiftAssignment:
+//        return execute_OPR_RightShiftAssignment(node);
+//    case Operation::OPR_UnsignedRightShiftAssignment:
+//        return execute_OPR_UnsignedRightShiftAssignment(node);
+//    case Operation::OPR_BitwiseANDAssignment:
+//        return execute_OPR_BitwiseANDAssignment(node);
+//    case Operation::OPR_BitwiseXORAssignment:
+//        return execute_OPR_BitwiseXORAssignment(node);
+//    case Operation::OPR_BitwiseORAssignment:
+//        return execute_OPR_BitwiseORAssignment(node);
+//    case Operation::OPR_Yield:
+//        return execute_OPR_Yield(node);
+//    case Operation::OPR_Spread:
+//        return execute_OPR_Spread(node);
+//    case Operation::OPR_Comma:
+//        return execute_OPR_Comma(node);
     default:
-        throw unavailable_operation();
+        throw unimplemented_error(std::get<Operation>(*node));
     }
 }
 
@@ -310,10 +409,10 @@ auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRe
             return CompletionRecord::Normal(*lshPtr);
         }
         if(*operation == Parser::Operation::OPR_JsonObject){
-            throw unavailable_operation();
+            throw unimplemented_error("Object-decomposition");
         }
         if(*operation == Parser::Operation::OPR_ArrayObject){
-            throw unavailable_operation();
+            throw unimplemented_error("Array-decomposition");
         }
     }
 
