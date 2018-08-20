@@ -6,6 +6,11 @@ You will find examples in `src/tests.cpp`.
 
 # Build
 
+This repository has submodules, don't forget to do :
+```
+# git submodule update --init
+```
+
 For Code::Blocks (see https://github.com/chris-be/premake-codeblocks):
 ```
 # cd build
