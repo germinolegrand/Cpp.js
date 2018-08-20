@@ -23,7 +23,7 @@ function generate_options(jln_opt)
 end
 
 workspace "Cpp.js"
-   configurations { "Debug", "Release" }
+   configurations { "Debug", "Release", "Tests" }
 
 project "Cpp.js"
    kind "ConsoleApp"
@@ -36,11 +36,21 @@ project "Cpp.js"
 
    files { "../src/**.h", "../src/**.cpp" }
 
+   filter "configurations:Tests"
+      includedirs { "../src" }
+      files { "../tests/**.h", "../tests/**.cpp" }
+      symbols "On"
+      generate_options {warnings='on', debug='on', glibcxx_debug='on'}
+
    filter "configurations:Debug"
+      includedirs { "../src" }
+      files { "../console/**.h", "../console/**.cpp" }
       symbols "On"
       generate_options {warnings='on', debug='on', glibcxx_debug='on'}
 
    filter "configurations:Release"
+      includedirs { "../src" }
+      files { "../console/**.h", "../console/**.cpp" }
       defines { "NDEBUG" }
       optimize "On"
       generate_options {warnings='on'}
