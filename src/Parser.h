@@ -83,7 +83,7 @@ public:
         OPR_Remainder      = 0x0e03,
 
         OPR_Addition     = 0x0d00,
-        OPR_Substraction = 0x0d01,
+        OPR_Subtraction  = 0x0d01,
 
         OPR_BitwiseLeftShift          = 0x0c00,
         OPR_BitwiseRightShift         = 0x0c01,

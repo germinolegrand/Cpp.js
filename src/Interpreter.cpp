@@ -138,18 +138,18 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_Void(node);
 //    case Operation::OPR_Delete:
 //        return execute_OPR_Delete(node);
-//    case Operation::OPR_Multiplication:
-//        return execute_OPR_Multiplication(node);
+    case Operation::OPR_Multiplication:
+        return execute_OPR_Multiplication(node);
 //    case Operation::OPR_Exponentiation:
 //        return execute_OPR_Exponentiation(node);
-//    case Operation::OPR_Division:
-//        return execute_OPR_Division(node);
-//    case Operation::OPR_Remainder:
-//        return execute_OPR_Remainder(node);
+    case Operation::OPR_Division:
+        return execute_OPR_Division(node);
+    case Operation::OPR_Remainder:
+        return execute_OPR_Remainder(node);
     case Operation::OPR_Addition:
         return execute_OPR_Addition(node);
-//    case Operation::OPR_Substraction:
-//        return execute_OPR_Substraction(node);
+    case Operation::OPR_Subtraction:
+        return execute_OPR_Subtraction(node);
 //    case Operation::OPR_BitwiseLeftShift:
 //        return execute_OPR_BitwiseLeftShift(node);
 //    case Operation::OPR_BitwiseRightShift:
@@ -358,6 +358,51 @@ auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> Completion
     return CompletionRecord::Normal(*memberPtr);
 }
 
+auto Interpreter::execute_OPR_Multiplication(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto lhs = context().calculated.at(node.begin());
+    auto rhs = context().calculated.at(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs * rhs);
+}
+
+auto Interpreter::execute_OPR_Division(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto lhs = context().calculated.at(node.begin());
+    auto rhs = context().calculated.at(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs / rhs);
+}
+
+auto Interpreter::execute_OPR_Remainder(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto lhs = context().calculated.at(node.begin());
+    auto rhs = context().calculated.at(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs % rhs);
+}
+
 auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){
@@ -371,6 +416,21 @@ auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionReco
     auto lhs = context().calculated.at(node.begin());
     auto rhs = context().calculated.at(std::next(node.begin()));
     return CompletionRecord::Normal(lhs + rhs);
+}
+
+auto Interpreter::execute_OPR_Subtraction(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto lhs = context().calculated.at(node.begin());
+    auto rhs = context().calculated.at(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs - rhs);
 }
 
 auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord

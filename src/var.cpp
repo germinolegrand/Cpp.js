@@ -219,3 +219,19 @@ var operator+(var const& leftHS, var const& rightHS){
     }
     return leftHS.to_double() + rightHS.to_double();
 }
+
+var operator-(var const& leftHS, var const& rightHS){
+    return leftHS.to_double() - rightHS.to_double();
+}
+
+var operator*(var const& leftHS, var const& rightHS){
+    return leftHS.to_double() * rightHS.to_double();
+}
+
+var operator/(var const& leftHS, var const& rightHS){
+    return leftHS.to_double() / rightHS.to_double();
+}
+
+var operator%(var const& leftHS, var const& rightHS){
+    return std::fmod(leftHS.to_double(), rightHS.to_double());
+}

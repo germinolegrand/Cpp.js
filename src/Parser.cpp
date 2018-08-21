@@ -30,7 +30,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
     OPERATIONSTR(Division),
     OPERATIONSTR(Remainder),
     OPERATIONSTR(Addition),
-    OPERATIONSTR(Substraction),
+    OPERATIONSTR(Subtraction),
     OPERATIONSTR(BitwiseLeftShift),
     OPERATIONSTR(BitwiseRightShift),
     OPERATIONSTR(BitwiseUnsignedRightShift),
@@ -282,8 +282,8 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(parse_binaryLROperation(Lexer::Punctuator::PCT_plus,  Operation::OPR_Addition,     tree, opr_precedence)
-    || parse_binaryLROperation(Lexer::Punctuator::PCT_minus, Operation::OPR_Substraction, tree, opr_precedence)){
+    if(parse_binaryLROperation(Lexer::Punctuator::PCT_plus,  Operation::OPR_Addition,    tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_minus, Operation::OPR_Subtraction, tree, opr_precedence)){
         return true;
     }
 

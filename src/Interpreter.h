@@ -58,21 +58,25 @@ private:
 
     auto execute_step() -> CompletionRecord;
 
-    auto execute_Node(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_Statement(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_Operation(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_VarUse(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_VarDecl(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_Node                   (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_Statement              (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_Operation              (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_VarUse                 (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_VarDecl                (Parser::ParseNode node) -> CompletionRecord;
 
-    auto execute_STM_TranslationUnit(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_STM_Expression(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_STM_Block(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_TranslationUnit    (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_Expression         (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_Block              (Parser::ParseNode node) -> CompletionRecord;
 
-    auto execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord;
-    auto execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Grouping           (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_JsonObject         (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_MemberAccess       (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Multiplication     (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Division           (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Remainder          (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Addition           (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Subtraction        (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Assignment         (Parser::ParseNode node) -> CompletionRecord;
 
     auto resolveBinding(std::string const& name, var environment = {}) -> var*;
     auto resolveMemberAccessNode(Parser::ParseNode node) -> var*;

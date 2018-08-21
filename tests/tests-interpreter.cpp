@@ -65,4 +65,14 @@ TEST_CASE("Interpreter", "[interpreter]"){
 {"c":3,"a":2,"d":1,"b":"coucoufalse"}
 )Interpreter");
     }
+    SECTION("Basic arithmetic operations"){
+        is.str("var x = (1 + 19)*5/4%7;");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+4
+)Interpreter");
+    }
 }
