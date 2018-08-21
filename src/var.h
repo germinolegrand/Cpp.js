@@ -10,13 +10,15 @@ class unavailable_operation{};
 
 class var
 {
+    var(bool b, bool);
 public:
     var() = default;
     var(std::string const& str);
     var(char const* c_str):var(std::string(c_str)){}
     var(std::regex const& rgx);
     var(double d);
-    var(bool b);
+    template<class T>
+    var(std::enable_if_t<!std::is_invocable<T>::value, bool> b):var(b, true){}
     var(std::nullptr_t);
     var(std::function<var(std::vector<var> args)>);
     var(std::unordered_map<std::string, var>);
