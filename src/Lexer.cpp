@@ -169,9 +169,9 @@ auto Lexer::analyseLiteralString() -> std::optional<Lexem>
                 m_source.consume();
                 break;
             default:
-                break;
+                throw std::invalid_argument("Unknown escape sequence while lexing Literal string");
             }
-
+            escaped = false;
         } else if(ch == '\\'){
             escaped = true;
             m_source.consume();
