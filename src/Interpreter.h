@@ -32,7 +32,7 @@ private:
             Throw
         };
 
-        Type type;
+        Type type = Type::Normal;
         var value;
         std::string target;
 
@@ -71,6 +71,7 @@ private:
     auto execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord;
 
     auto resolveBinding(std::string const& name, var environment = {}) -> var*;

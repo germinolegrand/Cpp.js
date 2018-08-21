@@ -23,6 +23,8 @@ public:
 
     var& operator=(var const& o){ m_value = o.m_value; return *this; }
 
+    friend var operator+(var const&, var const&);
+
     bool is_undefined() const;
     bool is_null() const;
     bool is_callable() const;

@@ -146,8 +146,8 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_Division(node);
 //    case Operation::OPR_Remainder:
 //        return execute_OPR_Remainder(node);
-//    case Operation::OPR_Addition:
-//        return execute_OPR_Addition(node);
+    case Operation::OPR_Addition:
+        return execute_OPR_Addition(node);
 //    case Operation::OPR_Substraction:
 //        return execute_OPR_Substraction(node);
 //    case Operation::OPR_BitwiseLeftShift:
@@ -232,7 +232,7 @@ auto Interpreter::execute_VarUse(Parser::ParseNode node) -> CompletionRecord
 
 auto Interpreter::execute_VarDecl(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         if(node.empty()){
             auto& name = std::get<Parser::VarDecl>(*node).name;
             auto& variable = context().environment[name];
@@ -264,7 +264,7 @@ auto Interpreter::execute_STM_TranslationUnit(Parser::ParseNode node) -> Complet
 
 auto Interpreter::execute_STM_Expression(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         context().currentNode = node.begin();
         return CompletionRecord::Normal();
     }
@@ -276,7 +276,7 @@ auto Interpreter::execute_STM_Expression(Parser::ParseNode node) -> CompletionRe
 
 auto Interpreter::execute_STM_Block(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         if(!node.empty()){
             context().currentNode = node.begin();
         }
@@ -293,7 +293,7 @@ auto Interpreter::execute_STM_Block(Parser::ParseNode node) -> CompletionRecord
 
 auto Interpreter::execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         if(node.empty()){
             return CompletionRecord::Normal();
         }
@@ -311,7 +311,7 @@ auto Interpreter::execute_OPR_Grouping(Parser::ParseNode node) -> CompletionReco
 
 auto Interpreter::execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         if(node.empty()){
             return CompletionRecord::Normal(std::unordered_map<std::string, var>{});
         }
@@ -334,7 +334,7 @@ auto Interpreter::execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRe
 
 auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         context().currentNode = node.begin();
         return CompletionRecord::Normal();
     }
@@ -358,9 +358,24 @@ auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> Completion
     return CompletionRecord::Normal(*memberPtr);
 }
 
+auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto lhs = context().calculated.at(node.begin());
+    auto rhs = context().calculated.at(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs + rhs);
+}
+
 auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord
 {
-    if(node.parent() == context().previousNode){
+    if(context().previousNode == node.parent()){
         auto lhsNode = node.begin();
         if(std::holds_alternative<Parser::VarUse>(*lhsNode)){
             context().currentNode = std::next(lhsNode);

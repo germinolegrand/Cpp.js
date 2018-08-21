@@ -15,7 +15,7 @@ TEST_CASE("Var", "[var]"){
     os << '\n' << a << '\n';
 
     CHECK(os.str() == R"(
-{"b":34.000000,"d":"e"}
+{"b":34,"d":"e"}
 )");
     CHECK(a["b"] == 34);
     CHECK(ref["b"] == 34);

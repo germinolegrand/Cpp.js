@@ -22,7 +22,7 @@ TEST_CASE("Interpreter", "[interpreter]"){
 
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
-3.000000
+3
 )Interpreter");
     }
     SECTION("Variable declaration"){
@@ -32,7 +32,7 @@ TEST_CASE("Interpreter", "[interpreter]"){
 
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
-3.000000
+3
 )Interpreter");
     }
     SECTION("JsonObject simple"){
@@ -42,7 +42,7 @@ TEST_CASE("Interpreter", "[interpreter]"){
 
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
-{"x":{},"abc":"nooo","34.000000":42.000000}
+{"x":{},"abc":"nooo","34":42}
 )Interpreter");
     }
     SECTION("MemberAccess Assignment"){
@@ -52,7 +52,17 @@ TEST_CASE("Interpreter", "[interpreter]"){
 
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
-{"b":4.000000,"a":5.000000}
+{"b":4,"a":5}
+)Interpreter");
+    }
+    SECTION("Addition"){
+        is.str("var x = {a: 1 + 1, b: 'coucou' + false, c: 2 + true, d: true + false};");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+{"c":3,"a":2,"d":1,"b":"coucoufalse"}
 )Interpreter");
     }
 }

@@ -22,7 +22,7 @@ TEST_CASE("Lexer", "[lexer]"){
 Keyword(var)
 Identifier(x)
 Punctuator(=)
-Literal(3.000000)
+Literal(3)
 Punctuator(;)
 )Lexer");
 }

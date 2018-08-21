@@ -65,7 +65,9 @@ std::string var::to_string() const
         } else if constexpr(fys::is<bool>(arg)){
             return arg ? "true" : "false";
         } else if constexpr(fys::is<double>(arg)){
-            return std::to_string(arg);
+            std::stringstream strstr;
+            strstr << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << arg;
+            return strstr.str();
         } else if constexpr(fys::is<std::string>(arg)){
             return arg;
         } else if constexpr(fys::is<std::regex>(arg)){
@@ -207,4 +209,13 @@ var const& var::operator[](var property) const
 
     static const var undefined{};
     return undefined;
+}
+
+
+var operator+(var const& leftHS, var const& rightHS){
+    if(std::holds_alternative<std::string>(*leftHS.m_value)
+       || std::holds_alternative<std::string>(*rightHS.m_value)){
+        return leftHS.to_string() + rightHS.to_string();
+    }
+    return leftHS.to_double() + rightHS.to_double();
 }
