@@ -1,5 +1,7 @@
 #include "Interpreter.h"
 
+#include <iostream>
+
 Interpreter::Interpreter()
 {
     //ctor
@@ -11,7 +13,22 @@ void Interpreter::feed(Parser::ParseTree tree)
     ExecutionContext ctx {
         Realm{},
         var{},
-        var{{{"test", "Environment"}}},
+        var{{
+            {"console", {{
+                {"log", var(
+                    [](auto args){
+                        std::copy(std::begin(args), std::end(args), std::ostream_iterator<var>(std::cout));
+                        std::cout << '\n';
+                        return var{};
+                    })
+                }
+            }}},
+            {"exit", var(
+                [](auto args)->var{
+                    exit(args.size() >= 1 ? static_cast<int>(args[0].to_double()) : 0);
+                })
+            }
+        }},
         m_parseTrees.back().root(),
         m_parseTrees.back().root(),
         m_parseTrees.back().root(),
@@ -114,8 +131,8 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
         return execute_OPR_MemberAccess(node);
 //    case Operation::OPR_New:
 //        return execute_OPR_New(node);
-//    case Operation::OPR_Call:
-//        return execute_OPR_Call(node);
+    case Operation::OPR_Call:
+        return execute_OPR_Call(node);
 //    case Operation::OPR_PostfixIncrement:
 //        return execute_OPR_PostfixIncrement(node);
 //    case Operation::OPR_PostfixDecrement:
@@ -358,6 +375,30 @@ auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> Completion
     return CompletionRecord::Normal(*memberPtr);
 }
 
+auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    auto nextNode = std::next(context().previousNode);
+    if(nextNode != node.end()){
+        context().currentNode = nextNode;
+        return CompletionRecord::Normal();
+    }
+    std::vector<var> args;
+    args.reserve(node.children() - 1);
+    for(auto childNode = std::next(node.begin()); childNode != nextNode; ++childNode){
+        args.push_back(context().calculated.extract(childNode).mapped());
+    }
+    auto lhs = context().calculated.extract(node.begin());
+    try{
+        return CompletionRecord::Normal(lhs.mapped().operator()(std::move(args)));
+    }catch(unavailable_operation&){
+        return {CompletionRecord::Type::Throw, "TypeError", {}};
+    }
+}
+
 auto Interpreter::execute_OPR_Multiplication(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){
@@ -368,9 +409,9 @@ auto Interpreter::execute_OPR_Multiplication(Parser::ParseNode node) -> Completi
         context().currentNode = std::next(node.begin());
         return CompletionRecord::Normal();
     }
-    auto lhs = context().calculated.at(node.begin());
-    auto rhs = context().calculated.at(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs * rhs);
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs.mapped() * rhs.mapped());
 }
 
 auto Interpreter::execute_OPR_Division(Parser::ParseNode node) -> CompletionRecord
@@ -383,9 +424,9 @@ auto Interpreter::execute_OPR_Division(Parser::ParseNode node) -> CompletionReco
         context().currentNode = std::next(node.begin());
         return CompletionRecord::Normal();
     }
-    auto lhs = context().calculated.at(node.begin());
-    auto rhs = context().calculated.at(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs / rhs);
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs.mapped() / rhs.mapped());
 }
 
 auto Interpreter::execute_OPR_Remainder(Parser::ParseNode node) -> CompletionRecord
@@ -398,9 +439,9 @@ auto Interpreter::execute_OPR_Remainder(Parser::ParseNode node) -> CompletionRec
         context().currentNode = std::next(node.begin());
         return CompletionRecord::Normal();
     }
-    auto lhs = context().calculated.at(node.begin());
-    auto rhs = context().calculated.at(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs % rhs);
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs.mapped() % rhs.mapped());
 }
 
 auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord
@@ -413,9 +454,9 @@ auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionReco
         context().currentNode = std::next(node.begin());
         return CompletionRecord::Normal();
     }
-    auto lhs = context().calculated.at(node.begin());
-    auto rhs = context().calculated.at(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs + rhs);
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs.mapped() + rhs.mapped());
 }
 
 auto Interpreter::execute_OPR_Subtraction(Parser::ParseNode node) -> CompletionRecord
@@ -428,9 +469,9 @@ auto Interpreter::execute_OPR_Subtraction(Parser::ParseNode node) -> CompletionR
         context().currentNode = std::next(node.begin());
         return CompletionRecord::Normal();
     }
-    auto lhs = context().calculated.at(node.begin());
-    auto rhs = context().calculated.at(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs - rhs);
+    auto lhs = context().calculated.extract(node.begin());
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(lhs.mapped() - rhs.mapped());
 }
 
 auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord

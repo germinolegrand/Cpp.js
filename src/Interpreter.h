@@ -71,6 +71,7 @@ private:
     auto execute_OPR_Grouping           (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_JsonObject         (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_MemberAccess       (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Call               (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Multiplication     (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Division           (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Remainder          (Parser::ParseNode node) -> CompletionRecord;
