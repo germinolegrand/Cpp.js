@@ -1,0 +1,41 @@
+language: cpp
+dist: trusty
+sudo: required
+
+script:
+  - cd build && chmod +x premake5-linux64 && ./premake5-linux64 gmake2
+  - make config=tests
+  - chmod +x bin/Tests/Cpp.js && ./bin/Tests/Cpp.js
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc-8
+      env:
+        - CC=gcc-8
+        - CXX=g++-8
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      install:
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+    - os: linux
+      compiler: clang-6.0
+      env:
+        - CC=clang-6.0
+        - CXX=clang++-6.0
+      addons:
+        apt:
+          packages:
+            - clang-6.0
+            - g++-8
+          sources:
+            - ubuntu-toolchain-r-test
+            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
+              key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
+      install:
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+        - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-6.0 90
