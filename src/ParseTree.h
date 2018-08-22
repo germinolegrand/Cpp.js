@@ -20,7 +20,7 @@ public:
     public:
         using NodeValue = std::conditional_t<Const, T const, T>;
 
-        using difference_type = size_t;
+        using difference_type = std::ptrdiff_t;
         using value_type = NodeValue;
         using pointer = NodeValue*;
         using reference = NodeValue&;
@@ -341,7 +341,7 @@ size_t ParseTree<T>::NodeBase<Const>::children() const
 template<class T> template<bool Const>
 size_t ParseTree<T>::NodeBase<Const>::deep_size() const
 {
-    return end().m_index - begin().m_index;
+    return static_cast<size_t>(end().m_index - begin().m_index);
 }
 
 template<class T> template<bool Const>
@@ -540,7 +540,7 @@ void ParseTree<T>::NodeBase<Const>::prune(NodeBase& other)
 template<class T> template<bool Const>
 void ParseTree<T>::NodeBase<Const>::wrap(T&& element)
 {
-    auto totalSize = deep_size() + 1;
+    difference_type totalSize = deep_size() + 1;
     auto it = m_tree->emplace(get(), 1, std::forward<T>(element));
     std::next(it, totalSize)->first -= 1;
 }

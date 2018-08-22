@@ -116,7 +116,7 @@ auto Lexer::analyseLiteral() -> std::optional<Lexem>
     }
     std::optional<Lexem> res;
     if(m_canBeLiteralFloat && (res = analyseLiteralFloat())){
-        return std::move(res);
+        return res;
     }
     return std::nullopt;
 }

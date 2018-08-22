@@ -1,12 +1,12 @@
 #include "var.h"
 
-#include <fys/utility/is.h>
-
 #include <cassert>
 #include <cmath>
 #include <iomanip>
 
 #define UNIMPLEMENTED assert(0 && "UNIMPLEMENTED"); throw unavailable_operation();
+
+#define ISSAME(T, U) std::is_same_v<std::decay_t<decltype(T)>, U>
 
 var::var(std::string const& str):
     m_value(std::make_shared<var_t>(str))
@@ -60,21 +60,21 @@ std::string var::to_string() const
         return "undefined";
 
     return std::visit([](auto&& arg) -> std::string{
-        if constexpr(fys::is<std::nullptr_t>(arg)){
+        if constexpr(ISSAME(arg, std::nullptr_t)){
             return std::string("null");
-        } else if constexpr(fys::is<bool>(arg)){
+        } else if constexpr(ISSAME(arg, bool)){
             return arg ? "true" : "false";
-        } else if constexpr(fys::is<double>(arg)){
+        } else if constexpr(ISSAME(arg, double)){
             std::stringstream strstr;
             strstr << std::defaultfloat << std::setprecision(std::numeric_limits<double>::max_digits10 + 1) << arg;
             return strstr.str();
-        } else if constexpr(fys::is<std::string>(arg)){
+        } else if constexpr(ISSAME(arg, std::string)){
             return arg;
-        } else if constexpr(fys::is<std::regex>(arg)){
+        } else if constexpr(ISSAME(arg, std::regex)){
             return "regex";
-        } else if constexpr(fys::is<function_t>(arg)){
+        } else if constexpr(ISSAME(arg, function_t)){
             return "function";
-        } else if constexpr(fys::is<object_t>(arg)){
+        } else if constexpr(ISSAME(arg, object_t)){
             std::stringstream strstr;
             strstr << '{';
             for(auto& [key, value]: arg){
@@ -109,15 +109,15 @@ double var::to_double() const
         return 0;
 
     return std::visit([](auto&& arg) -> double{
-        if constexpr(fys::is<std::nullptr_t>(arg)){
+        if constexpr(ISSAME(arg, std::nullptr_t)){
             return 0;
-        } else if constexpr(fys::is<bool>(arg)){
+        } else if constexpr(ISSAME(arg, bool)){
             return arg;
-        } else if constexpr(fys::is<double>(arg)){
+        } else if constexpr(ISSAME(arg, double)){
             return arg;
-        } else if constexpr(fys::is<std::string>(arg)){
+        } else if constexpr(ISSAME(arg, std::string)){
             return std::stod(arg);
-        } else if constexpr(fys::is<object_t>(arg)){
+        } else if constexpr(ISSAME(arg, object_t)){
             if(auto it = arg.find("to_double");
                 it != end(arg) && it->second.is_callable()){
                 return (it->second)().to_double();
@@ -133,15 +133,15 @@ bool var::to_bool() const
         return false;
 
     return std::visit([](auto&& arg) -> bool {
-        if constexpr(fys::is<std::nullptr_t>(arg)){
+        if constexpr(ISSAME(arg, std::nullptr_t)){
             return false;
-        } else if constexpr(fys::is<bool>(arg)){
+        } else if constexpr(ISSAME(arg, bool)){
             return arg;
-        } else if constexpr(fys::is<double>(arg)){
+        } else if constexpr(ISSAME(arg, double)){
             return arg != 0. && !std::isnan(arg);
-        } else if constexpr(fys::is<std::string>(arg)){
+        } else if constexpr(ISSAME(arg, std::string)){
             return !arg.empty();
-        } else if constexpr(fys::is<object_t>(arg)){
+        } else if constexpr(ISSAME(arg, object_t)){
             if(auto it = arg.find("to_bool");
                 it != end(arg) && it->second.is_callable()){
                 return (it->second)().to_bool();
