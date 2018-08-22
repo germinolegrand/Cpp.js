@@ -10,18 +10,19 @@ class unavailable_operation{};
 
 class var
 {
-    var(bool b, bool);
 public:
     var() = default;
     var(std::string const& str);
     var(char const* c_str):var(std::string(c_str)){}
     var(std::regex const& rgx);
     var(double d);
-    template<class T>
-    var(std::enable_if_t<!std::is_invocable<T>::value, bool> b):var(b, true){}
+    var(bool b);
     var(std::nullptr_t);
     var(std::function<var(std::vector<var> args)>);
     var(std::unordered_map<std::string, var>);
+    // Plain function pointers convert to bool if not explicitely overloaded
+    template<class T, class...Args>
+    var(T(*lambda)(Args...)):var(std::function<T(Args...)>(lambda)){}
 
     var& operator=(var const& o){ m_value = o.m_value; return *this; }
 

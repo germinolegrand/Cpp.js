@@ -20,7 +20,7 @@ var::var(double d):
     m_value(std::make_shared<var_t>(d))
 {}
 
-var::var(bool b, bool):
+var::var(bool b):
     m_value(std::make_shared<var_t>(b))
 {}
 
