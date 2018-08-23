@@ -32,6 +32,12 @@ public:
     friend var operator/(var const&, var const&);
     friend var operator%(var const&, var const&);
 
+    var& operator+=(var const& o){ return *this = *this + o; }
+    var& operator-=(var const& o){ return *this = *this - o; }
+    var& operator*=(var const& o){ return *this = *this * o; }
+    var& operator/=(var const& o){ return *this = *this / o; }
+    var& operator%=(var const& o){ return *this = *this % o; }
+
     bool is_undefined() const;
     bool is_null() const;
     bool is_callable() const;
@@ -79,4 +85,10 @@ inline bool operator==(var const& a, double const& b){
 inline bool operator==(var const& a, var const& b){
     return a.to_string() == b.to_string();
 }
+
+var operator+(var const&, var const&);
+var operator-(var const&, var const&);
+var operator*(var const&, var const&);
+var operator/(var const&, var const&);
+var operator%(var const&, var const&);
 

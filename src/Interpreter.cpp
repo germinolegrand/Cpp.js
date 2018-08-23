@@ -156,23 +156,23 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //    case Operation::OPR_Delete:
 //        return execute_OPR_Delete(node);
     case Operation::OPR_Multiplication:
-        return execute_OPR_Multiplication(node);
+        return execute_OPR_BinaryOperation<operator* >(node);
 //    case Operation::OPR_Exponentiation:
 //        return execute_OPR_Exponentiation(node);
     case Operation::OPR_Division:
-        return execute_OPR_Division(node);
+        return execute_OPR_BinaryOperation<operator/ >(node);
     case Operation::OPR_Remainder:
-        return execute_OPR_Remainder(node);
+        return execute_OPR_BinaryOperation<operator% >(node);
     case Operation::OPR_Addition:
-        return execute_OPR_Addition(node);
+        return execute_OPR_BinaryOperation<operator+ >(node);
     case Operation::OPR_Subtraction:
-        return execute_OPR_Subtraction(node);
+        return execute_OPR_BinaryOperation<operator- >(node);
 //    case Operation::OPR_BitwiseLeftShift:
-//        return execute_OPR_BitwiseLeftShift(node);
+//        return execute_OPR_BinaryOperation<operator<< >(node);
 //    case Operation::OPR_BitwiseRightShift:
-//        return execute_OPR_BitwiseRightShift(node);
+//        return execute_OPR_BinaryOperation<operator>> >(node);
 //    case Operation::OPR_BitwiseUnsignedRightShift:
-//        return execute_OPR_BitwiseUnsignedRightShift(node);
+//        return execute_OPR_BinaryOperation<operator>>> >(node);
 //    case Operation::OPR_LessThan:
 //        return execute_OPR_LessThan(node);
 //    case Operation::OPR_LessThanOrEqual:
@@ -206,29 +206,29 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //    case Operation::OPR_Conditional:
 //        return execute_OPR_Conditional(node);
     case Operation::OPR_Assignment:
-        return execute_OPR_Assignment(node);
-//    case Operation::OPR_AdditionAssignment:
-//        return execute_OPR_AdditionAssignment(node);
-//    case Operation::OPR_SubstractAssignment:
-//        return execute_OPR_SubstractAssignment(node);
-//    case Operation::OPR_MultiplicationAssignment:
-//        return execute_OPR_MultiplicationAssignment(node);
-//    case Operation::OPR_DivisionAssignment:
-//        return execute_OPR_DivisionAssignment(node);
-//    case Operation::OPR_RemainderAssignment:
-//        return execute_OPR_RemainderAssignment(node);
+        return execute_OPR_AssignmentOperation(node);
+    case Operation::OPR_AdditionAssignment:
+        return execute_OPR_AssignmentOperation<var::operator+= >(node);
+    case Operation::OPR_SubtractAssignment:
+        return execute_OPR_AssignmentOperation<var::operator-= >(node);
+    case Operation::OPR_MultiplicationAssignment:
+        return execute_OPR_AssignmentOperation<var::operator*= >(node);
+    case Operation::OPR_DivisionAssignment:
+        return execute_OPR_AssignmentOperation<var::operator/= >(node);
+    case Operation::OPR_RemainderAssignment:
+        return execute_OPR_AssignmentOperation<var::operator%= >(node);
 //    case Operation::OPR_LeftShiftAssignment:
-//        return execute_OPR_LeftShiftAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator<<= >(node);
 //    case Operation::OPR_RightShiftAssignment:
-//        return execute_OPR_RightShiftAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator>>= >(node);
 //    case Operation::OPR_UnsignedRightShiftAssignment:
-//        return execute_OPR_UnsignedRightShiftAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator>>>= >(node);
 //    case Operation::OPR_BitwiseANDAssignment:
-//        return execute_OPR_BitwiseANDAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator&= >(node);
 //    case Operation::OPR_BitwiseXORAssignment:
-//        return execute_OPR_BitwiseXORAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator^= >(node);
 //    case Operation::OPR_BitwiseORAssignment:
-//        return execute_OPR_BitwiseORAssignment(node);
+//        return execute_OPR_AssignmentOperation<var::operator|= >(node);
 //    case Operation::OPR_Yield:
 //        return execute_OPR_Yield(node);
 //    case Operation::OPR_Spread:
@@ -360,7 +360,7 @@ auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> Completion
         return CompletionRecord::Normal();
     }
     if(auto* opr = std::get_if<Parser::Operation>(&*node.parent());
-       opr && *opr == Parser::Operation::OPR_Assignment
+       opr && isAssignmentOPR(*opr)
        && node.parent().begin() == node){
         return CompletionRecord::Normal();
     }
@@ -399,7 +399,8 @@ auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
     }
 }
 
-auto Interpreter::execute_OPR_Multiplication(Parser::ParseNode node) -> CompletionRecord
+template<var(*operatorPtr)(var const&, var const&)>
+auto Interpreter::execute_OPR_BinaryOperation(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){
         context().currentNode = node.begin();
@@ -411,70 +412,11 @@ auto Interpreter::execute_OPR_Multiplication(Parser::ParseNode node) -> Completi
     }
     auto lhs = context().calculated.extract(node.begin());
     auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs.mapped() * rhs.mapped());
+    return CompletionRecord::Normal((*operatorPtr)(lhs.mapped(), rhs.mapped()));
 }
 
-auto Interpreter::execute_OPR_Division(Parser::ParseNode node) -> CompletionRecord
-{
-    if(context().previousNode == node.parent()){
-        context().currentNode = node.begin();
-        return CompletionRecord::Normal();
-    }
-    if(context().previousNode == node.begin()){
-        context().currentNode = std::next(node.begin());
-        return CompletionRecord::Normal();
-    }
-    auto lhs = context().calculated.extract(node.begin());
-    auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs.mapped() / rhs.mapped());
-}
-
-auto Interpreter::execute_OPR_Remainder(Parser::ParseNode node) -> CompletionRecord
-{
-    if(context().previousNode == node.parent()){
-        context().currentNode = node.begin();
-        return CompletionRecord::Normal();
-    }
-    if(context().previousNode == node.begin()){
-        context().currentNode = std::next(node.begin());
-        return CompletionRecord::Normal();
-    }
-    auto lhs = context().calculated.extract(node.begin());
-    auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs.mapped() % rhs.mapped());
-}
-
-auto Interpreter::execute_OPR_Addition(Parser::ParseNode node) -> CompletionRecord
-{
-    if(context().previousNode == node.parent()){
-        context().currentNode = node.begin();
-        return CompletionRecord::Normal();
-    }
-    if(context().previousNode == node.begin()){
-        context().currentNode = std::next(node.begin());
-        return CompletionRecord::Normal();
-    }
-    auto lhs = context().calculated.extract(node.begin());
-    auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs.mapped() + rhs.mapped());
-}
-
-auto Interpreter::execute_OPR_Subtraction(Parser::ParseNode node) -> CompletionRecord
-{
-    if(context().previousNode == node.parent()){
-        context().currentNode = node.begin();
-        return CompletionRecord::Normal();
-    }
-    if(context().previousNode == node.begin()){
-        context().currentNode = std::next(node.begin());
-        return CompletionRecord::Normal();
-    }
-    auto lhs = context().calculated.extract(node.begin());
-    auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal(lhs.mapped() - rhs.mapped());
-}
-
-auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRecord
+template<var&(var::*operatorPtr)(var const&)>
+auto Interpreter::execute_OPR_AssignmentOperation(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){
         auto lhsNode = node.begin();
@@ -512,7 +454,7 @@ auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRe
         if(!lshPtr){
             return {CompletionRecord::Type::Throw, "ReferenceError", {}};
         }
-        *lshPtr = rhs.mapped();
+        ((*lshPtr).*(operatorPtr))(rhs.mapped());
         return CompletionRecord::Normal(*lshPtr);
     }
     if(auto* operation = std::get_if<Parser::Operation>(&*lhsNode)){
@@ -521,7 +463,7 @@ auto Interpreter::execute_OPR_Assignment(Parser::ParseNode node) -> CompletionRe
             if(!lshPtr){
                 return {CompletionRecord::Type::Throw, "ReferenceError", {}};
             }
-            *lshPtr = rhs.mapped();
+            ((*lshPtr).*(operatorPtr))(rhs.mapped());
             return CompletionRecord::Normal(*lshPtr);
         }
         if(*operation == Parser::Operation::OPR_JsonObject){
@@ -554,6 +496,22 @@ auto Interpreter::resolveMemberAccessNode(Parser::ParseNode node) -> var*
     context().calculated.erase(node);
     auto irt = context().calculated.insert(std::move(lhs));
     return &irt.position->second[rhs.mapped()];
+}
+
+constexpr bool Interpreter::isAssignmentOPR(Parser::Operation opr) const
+{
+    return opr == Parser::Operation::OPR_Assignment
+        || opr == Parser::Operation::OPR_AdditionAssignment
+        || opr == Parser::Operation::OPR_SubtractAssignment
+        || opr == Parser::Operation::OPR_MultiplicationAssignment
+        || opr == Parser::Operation::OPR_DivisionAssignment
+        || opr == Parser::Operation::OPR_RemainderAssignment
+        || opr == Parser::Operation::OPR_LeftShiftAssignment
+        || opr == Parser::Operation::OPR_RightShiftAssignment
+        || opr == Parser::Operation::OPR_UnsignedRightShiftAssignment
+        || opr == Parser::Operation::OPR_BitwiseANDAssignment
+        || opr == Parser::Operation::OPR_BitwiseXORAssignment
+        || opr == Parser::Operation::OPR_BitwiseORAssignment;
 }
 
 var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists)

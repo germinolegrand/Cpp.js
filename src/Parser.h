@@ -115,7 +115,7 @@ public:
 
         OPR_Assignment                   = 0x0300,
         OPR_AdditionAssignment           = 0x0301,
-        OPR_SubstractAssignment          = 0x0302,
+        OPR_SubtractAssignment           = 0x0302,
         OPR_MultiplicationAssignment     = 0x0303,
         OPR_DivisionAssignment           = 0x0304,
         OPR_RemainderAssignment          = 0x0305,

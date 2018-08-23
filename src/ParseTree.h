@@ -172,7 +172,7 @@ auto ParseTree<T>::at() -> Node
 template<class T> template<class...Args>
 auto ParseTree<T>::at(size_t ind, Args...args) -> Node
 {
-    return std::next(at(args...).begin(), ind);
+    return std::next(at(args...).begin(), static_cast<typename Node::difference_type>(ind));
 }
 
 template<class T>
@@ -540,7 +540,7 @@ void ParseTree<T>::NodeBase<Const>::prune(NodeBase& other)
 template<class T> template<bool Const>
 void ParseTree<T>::NodeBase<Const>::wrap(T&& element)
 {
-    difference_type totalSize = deep_size() + 1;
+    auto totalSize = static_cast<difference_type>(deep_size()) + 1;
     auto it = m_tree->emplace(get(), 1, std::forward<T>(element));
     std::next(it, totalSize)->first -= 1;
 }

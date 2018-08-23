@@ -66,13 +66,23 @@ TEST_CASE("Interpreter", "[interpreter]"){
 )Interpreter");
     }
     SECTION("Basic arithmetic operations"){
-        is.str("var x = (1 + 19)*5/4%7;");
+        is.str("var x = (1 + 19)*5/4%7 - 1;");
         auto tree = parser.parse();
         interpreter.feed(tree);
 
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
-4
+3
+)Interpreter");
+    }
+    SECTION("MemberAccess Arithmetic Assignments"){
+        is.str("var x = {a:1}; x.a += 19; x.a *= 5; x.a /= 4; x.a %= 7; x.a -= 1;");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+3
 )Interpreter");
     }
 }

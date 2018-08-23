@@ -52,7 +52,7 @@ const std::unordered_map<Parser::Operation, std::string_view> Parser::OperationS
     OPERATIONSTR(Conditional),
     OPERATIONSTR(Assignment),
     OPERATIONSTR(AdditionAssignment),
-    OPERATIONSTR(SubstractAssignment),
+    OPERATIONSTR(SubtractAssignment),
     OPERATIONSTR(MultiplicationAssignment),
     OPERATIONSTR(DivisionAssignment),
     OPERATIONSTR(RemainderAssignment),
@@ -287,8 +287,8 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
         return true;
     }
 
-    if(parse_binaryLROperation(Lexer::Punctuator::PCT_double_lower,   Operation::OPR_BitwiseLeftShift,        tree, opr_precedence)
-    || parse_binaryLROperation(Lexer::Punctuator::PCT_double_greater, Operation::OPR_BitwiseRightShift,       tree, opr_precedence)
+    if(parse_binaryLROperation(Lexer::Punctuator::PCT_double_lower,   Operation::OPR_BitwiseLeftShift,          tree, opr_precedence)
+    || parse_binaryLROperation(Lexer::Punctuator::PCT_double_greater, Operation::OPR_BitwiseRightShift,         tree, opr_precedence)
     || parse_binaryLROperation(Lexer::Punctuator::PCT_triple_greater, Operation::OPR_BitwiseUnsignedRightShift, tree, opr_precedence)){
         return true;
     }
@@ -323,7 +323,7 @@ bool Parser::parse_Operation(ParseNode tree, int opr_precedence)
 
     if(parse_binaryRLOperation(Lexer::Punctuator::PCT_equal,                Operation::OPR_Assignment,                   tree, opr_precedence)
     || parse_binaryRLOperation(Lexer::Punctuator::PCT_plus_equal,           Operation::OPR_AdditionAssignment,           tree, opr_precedence)
-    || parse_binaryRLOperation(Lexer::Punctuator::PCT_minus_equal,          Operation::OPR_SubstractAssignment,          tree, opr_precedence)
+    || parse_binaryRLOperation(Lexer::Punctuator::PCT_minus_equal,          Operation::OPR_SubtractAssignment,           tree, opr_precedence)
     || parse_binaryRLOperation(Lexer::Punctuator::PCT_times_equal,          Operation::OPR_MultiplicationAssignment,     tree, opr_precedence)
     || parse_binaryRLOperation(Lexer::Punctuator::PCT_divided_equal,        Operation::OPR_DivisionAssignment,           tree, opr_precedence)
     || parse_binaryRLOperation(Lexer::Punctuator::PCT_modulo_equal,         Operation::OPR_RemainderAssignment,          tree, opr_precedence)
