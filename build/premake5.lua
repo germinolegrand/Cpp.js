@@ -1,9 +1,16 @@
 -- premake5.lua
 
 if not os.isfile("jln_flags.lua") then
-   http.download("https://raw.githubusercontent.com/jonathanpoelen/cpp-compiler-options/master/output/premake5", "jln_flags.lua")
+   local dwnl = "https://raw.githubusercontent.com/jonathanpoelen/cpp-compiler-options/master/output/premake5";
+   printf("Downloading jln_flags.lua from %s", dwnl);
+   http.download(dwnl, "jln_flags.lua")
 end
 local jln=dofileopt "jln_flags.lua"
+if jln then
+   printf("Loaded jln_flags.lua");
+else
+   printf("Could not load jln_flags.lua");
+end
 
 function generate_options(jln_opt)
    if jln then
@@ -40,13 +47,13 @@ project "Cpp.js"
       includedirs { "../src" }
       files { "../tests/**.h", "../tests/**.cpp" }
       symbols "On"
-      generate_options {warnings='on', debug='on', glibcxx_debug='on'}
+      generate_options {warnings='on', debug='on', libcxx_debug='on'}
 
    filter "configurations:Debug"
       includedirs { "../src" }
       files { "../console/**.h", "../console/**.cpp" }
       symbols "On"
-      generate_options {warnings='on', debug='on', glibcxx_debug='on'}
+      generate_options {warnings='on', debug='on', libcxx_debug='on'}
 
    filter "configurations:Release"
       includedirs { "../src" }
