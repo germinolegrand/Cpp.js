@@ -208,15 +208,15 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
     case Operation::OPR_Assignment:
         return execute_OPR_AssignmentOperation(node);
     case Operation::OPR_AdditionAssignment:
-        return execute_OPR_AssignmentOperation<var::operator+= >(node);
+        return execute_OPR_AssignmentOperation<&var::operator+= >(node);
     case Operation::OPR_SubtractAssignment:
-        return execute_OPR_AssignmentOperation<var::operator-= >(node);
+        return execute_OPR_AssignmentOperation<&var::operator-= >(node);
     case Operation::OPR_MultiplicationAssignment:
-        return execute_OPR_AssignmentOperation<var::operator*= >(node);
+        return execute_OPR_AssignmentOperation<&var::operator*= >(node);
     case Operation::OPR_DivisionAssignment:
-        return execute_OPR_AssignmentOperation<var::operator/= >(node);
+        return execute_OPR_AssignmentOperation<&var::operator/= >(node);
     case Operation::OPR_RemainderAssignment:
-        return execute_OPR_AssignmentOperation<var::operator%= >(node);
+        return execute_OPR_AssignmentOperation<&var::operator%= >(node);
 //    case Operation::OPR_LeftShiftAssignment:
 //        return execute_OPR_AssignmentOperation<var::operator<<= >(node);
 //    case Operation::OPR_RightShiftAssignment:
