@@ -235,3 +235,11 @@ var operator/(var const& leftHS, var const& rightHS){
 var operator%(var const& leftHS, var const& rightHS){
     return std::fmod(leftHS.to_double(), rightHS.to_double());
 }
+
+bool operator<(var const& leftHS, var const& rightHS){
+    if(std::holds_alternative<std::string>(*leftHS.m_value)
+       && std::holds_alternative<std::string>(*rightHS.m_value)){
+        return leftHS.to_string() < rightHS.to_string();
+    }
+    return leftHS.to_double() < rightHS.to_double();
+}

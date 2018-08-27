@@ -515,7 +515,7 @@ void ParseTree<T>::NodeBase<Const>::skip_remove()
         return;
     }
     auto dsize = deep_size();
-    auto frontIt = m_tree->m_tree.erase(get());
+    auto frontIt = m_tree->erase(get());
     std::advance(frontIt, dsize - 1);
     frontIt->first -= lweight;
 }

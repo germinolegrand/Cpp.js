@@ -32,11 +32,17 @@ public:
     friend var operator/(var const&, var const&);
     friend var operator%(var const&, var const&);
 
+    friend bool operator<(var const&, var const&);
+
     var& operator+=(var const& o){ return *this = *this + o; }
     var& operator-=(var const& o){ return *this = *this - o; }
     var& operator*=(var const& o){ return *this = *this * o; }
     var& operator/=(var const& o){ return *this = *this / o; }
     var& operator%=(var const& o){ return *this = *this % o; }
+    var& operator++(){ return *this = *this + 1.; }
+    var& operator--(){ return *this = *this - 1.; }
+    var operator++(int){ auto old = *this; ++(*this); return old; }
+    var operator--(int){ auto old = *this; --(*this); return old; }
 
     bool is_undefined() const;
     bool is_null() const;
@@ -92,3 +98,4 @@ var operator*(var const&, var const&);
 var operator/(var const&, var const&);
 var operator%(var const&, var const&);
 
+bool operator<(var const&, var const&);

@@ -12,6 +12,23 @@ int main()
     Parser parser{lexer};
     Interpreter interpreter;
 
+    interpreter.globalEnvironment() = var{{
+        {"console", {{
+            {"log", var(
+                [](auto args){
+                    std::copy(std::begin(args), std::end(args), std::ostream_iterator<var>(std::cout));
+                    std::cout << '\n';
+                    return var{};
+                })
+            }
+        }}},
+        {"exit", var(
+            [](auto args)->var{
+                exit(args.size() >= 1 ? static_cast<int>(args[0].to_double()) : 0);
+            })
+        }
+    }};
+
     while(true){
         std::cout << "Cpp.js> " << std::flush;
         try{

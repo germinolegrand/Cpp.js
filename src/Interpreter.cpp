@@ -13,22 +13,7 @@ void Interpreter::feed(Parser::ParseTree tree)
     ExecutionContext ctx {
         Realm{},
         var{},
-        var{{
-            {"console", {{
-                {"log", var(
-                    [](auto args){
-                        std::copy(std::begin(args), std::end(args), std::ostream_iterator<var>(std::cout));
-                        std::cout << '\n';
-                        return var{};
-                    })
-                }
-            }}},
-            {"exit", var(
-                [](auto args)->var{
-                    exit(args.size() >= 1 ? static_cast<int>(args[0].to_double()) : 0);
-                })
-            }
-        }},
+        m_globalEnvironment,
         m_parseTrees.back().root(),
         m_parseTrees.back().root(),
         m_parseTrees.back().root(),
@@ -133,14 +118,14 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_New(node);
     case Operation::OPR_Call:
         return execute_OPR_Call(node);
-//    case Operation::OPR_PostfixIncrement:
-//        return execute_OPR_PostfixIncrement(node);
-//    case Operation::OPR_PostfixDecrement:
-//        return execute_OPR_PostfixDecrement(node);
-//    case Operation::OPR_PrefixIncrement:
-//        return execute_OPR_PrefixIncrement(node);
-//    case Operation::OPR_PrefixDecrement:
-//        return execute_OPR_PrefixDecrement(node);
+    case Operation::OPR_PostfixIncrement:
+        return execute_OPR_PostfixAssignmentOperation<&var::operator++ >(node);
+    case Operation::OPR_PostfixDecrement:
+        return execute_OPR_PostfixAssignmentOperation<&var::operator-- >(node);
+    case Operation::OPR_PrefixIncrement:
+        return execute_OPR_PrefixAssignmentOperation<&var::operator++ >(node);
+    case Operation::OPR_PrefixDecrement:
+        return execute_OPR_PrefixAssignmentOperation<&var::operator-- >(node);
 //    case Operation::OPR_LogicalNot:
 //        return execute_OPR_LogicalNot(node);
 //    case Operation::OPR_BitwiseNot:
@@ -477,6 +462,68 @@ auto Interpreter::execute_OPR_AssignmentOperation(Parser::ParseNode node) -> Com
     throw std::logic_error("Unreachable code line was reached!");
 }
 
+template<var(var::*operatorPtr)(int)>
+auto Interpreter::execute_OPR_PostfixAssignmentOperation(Parser::ParseNode node) -> CompletionRecord
+{
+    auto lhsNode = node.begin();
+    if(context().previousNode == node.parent()){
+        if(auto operation = std::get_if<Parser::Operation>(&*lhsNode);
+                operation && *operation == Parser::Operation::OPR_MemberAccess){
+            context().currentNode = lhsNode;
+            return CompletionRecord::Normal();
+        }
+    }
+
+    var* lshPtr = nullptr;
+
+    if(auto* varUse = std::get_if<Parser::VarUse>(&*lhsNode)){
+        lshPtr = resolveBinding(varUse->name);
+    } else if(auto operation = std::get_if<Parser::Operation>(&*lhsNode);
+                operation && *operation == Parser::Operation::OPR_MemberAccess){
+        lshPtr = resolveMemberAccessNode(lhsNode);
+    } else {
+        throw std::invalid_argument("Expected VarUse or Operation(OPR_MemberAccess) as LeftHandSideExpression in unary assignment");
+    }
+
+    if(!lshPtr){
+        return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+    }
+    var oldValue = *lshPtr;
+    ((*lshPtr).*(operatorPtr))(0);
+    return CompletionRecord::Normal(oldValue);
+}
+
+template<var&(var::*operatorPtr)()>
+auto Interpreter::execute_OPR_PrefixAssignmentOperation(Parser::ParseNode node) -> CompletionRecord
+{
+    auto lhsNode = node.begin();
+    if(context().previousNode == node.parent()){
+        if(auto operation = std::get_if<Parser::Operation>(&*lhsNode);
+                operation && *operation == Parser::Operation::OPR_MemberAccess){
+            context().currentNode = lhsNode;
+            return CompletionRecord::Normal();
+        }
+    }
+
+    var* lshPtr = nullptr;
+
+    if(auto* varUse = std::get_if<Parser::VarUse>(&*lhsNode)){
+        lshPtr = resolveBinding(varUse->name);
+    } else if(auto operation = std::get_if<Parser::Operation>(&*lhsNode);
+                   operation && *operation == Parser::Operation::OPR_MemberAccess){
+        lshPtr = resolveMemberAccessNode(lhsNode);
+    } else {
+        throw std::invalid_argument("Expected VarUse or Operation(OPR_MemberAccess) as LeftHandSideExpression in unary assignment");
+    }
+
+    if(!lshPtr){
+        return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+    }
+    ((*lshPtr).*(operatorPtr))();
+    return CompletionRecord::Normal(*lshPtr);
+}
+
+
 auto Interpreter::resolveBinding(std::string const& name, var environment) -> var*
 {
     if(environment.is_undefined()){
@@ -511,7 +558,11 @@ constexpr bool Interpreter::isAssignmentOPR(Parser::Operation opr) const
         || opr == Parser::Operation::OPR_UnsignedRightShiftAssignment
         || opr == Parser::Operation::OPR_BitwiseANDAssignment
         || opr == Parser::Operation::OPR_BitwiseXORAssignment
-        || opr == Parser::Operation::OPR_BitwiseORAssignment;
+        || opr == Parser::Operation::OPR_BitwiseORAssignment
+        || opr == Parser::Operation::OPR_PostfixIncrement
+        || opr == Parser::Operation::OPR_PostfixDecrement
+        || opr == Parser::Operation::OPR_PrefixIncrement
+        || opr == Parser::Operation::OPR_PrefixDecrement;
 }
 
 var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists)

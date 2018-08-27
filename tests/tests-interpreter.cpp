@@ -15,6 +15,23 @@ TEST_CASE("Interpreter", "[interpreter]"){
     Parser parser{lexer};
     Interpreter interpreter;
 
+    interpreter.globalEnvironment() = var{{
+        {"console", {{
+            {"log", var(
+                [&os](auto args){
+                    std::copy(std::begin(args), std::end(args), std::ostream_iterator<var>(os));
+                    os << '\n';
+                    return var{};
+                })
+            }
+        }}},
+        {"exit", var(
+            [](auto args)->var{
+                exit(args.size() >= 1 ? static_cast<int>(args[0].to_double()) : 0);
+            })
+        }
+    }};
+
     SECTION("Variable declaration"){
         is.str("var x = 3;");
         auto tree = parser.parse();
@@ -83,6 +100,17 @@ TEST_CASE("Interpreter", "[interpreter]"){
         os << '\n' << interpreter.execute() << '\n';
         CHECK(os.str() == R"Interpreter(
 3
+)Interpreter");
+    }
+    SECTION("Call operation with arguments"){
+        is.str("console.log(2+2, '='+4);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+4=4
+undefined
 )Interpreter");
     }
 }

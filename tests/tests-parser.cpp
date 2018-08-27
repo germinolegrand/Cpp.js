@@ -555,4 +555,24 @@ TEST_CASE("Parser", "[parser]"){
 >>>-4:Literal(3)
 )Parser");
     }
+    SECTION("Call operation with arguments"){
+        is.str("console.log(2+2, '='+4);");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(1100:Call)
+>>>1:Operation(1200:MemberAccess)
+>>>>0:VarUse(name:console)
+>>>>-1:Literal(log)
+>>>1:Operation(d00:Addition)
+>>>>0:Literal(2)
+>>>>-1:Literal(2)
+>>>1:Operation(d00:Addition)
+>>>>0:Literal(=)
+>>>>-5:Literal(4)
+)Parser");
+    }
 }

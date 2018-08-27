@@ -444,6 +444,11 @@ bool Parser::parse_GroupingOperation(ParseNode tree, int opr_precedence)
     if(!parse_evaluationExpression(operation, 0)){
         expected("EvaluationExpression"s, lex());
     }
+    while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
+        if(!parse_evaluationExpression(operation, 0)){
+            expected("EvaluationExpression"s, lex());
+        }
+    }
     lex_expect(Lexer::Punctuator::PCT_parenthese_right);
     return true;
 }
@@ -617,13 +622,15 @@ bool Parser::parse_CallOperation(ParseNode tree, int opr_precedence)
         return false;
     }
     auto previous = previousWrapPrecedence(tree, Operation::OPR_Call);
-    if(parse_evaluationExpression(previous, 0)){
+    auto grouping = previous.append(Operation::OPR_Grouping);
+    if(parse_evaluationExpression(grouping, 0)){
         while(lex_expect_optional(Lexer::Punctuator::PCT_comma)){
-            if(!parse_evaluationExpression(previous, 0)){
+            if(!parse_evaluationExpression(grouping, 0)){
                 expected("EvaluationExpression"s, lex());
             }
         }
     }
+    grouping.skip_remove();
     lex_expect(Lexer::Punctuator::PCT_parenthese_right);
     return true;
 }

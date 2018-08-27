@@ -7,6 +7,8 @@ class Interpreter
 public:
     Interpreter();
 
+    var& globalEnvironment(){ return m_globalEnvironment; }
+
     void feed(Parser::ParseTree tree);
 
     var execute();
@@ -76,6 +78,10 @@ private:
     auto execute_OPR_BinaryOperation            (Parser::ParseNode node) -> CompletionRecord;
     template<var&(var::*operatorPtr)(var const&) = &var::operator= >
     auto execute_OPR_AssignmentOperation        (Parser::ParseNode node) -> CompletionRecord;
+    template<var(var::*operatorPtr)(int) = &var::operator++ >
+    auto execute_OPR_PostfixAssignmentOperation (Parser::ParseNode node) -> CompletionRecord;
+    template<var&(var::*operatorPtr)() = &var::operator++ >
+    auto execute_OPR_PrefixAssignmentOperation  (Parser::ParseNode node) -> CompletionRecord;
 
     auto resolveBinding(std::string const& name, var environment = {}) -> var*;
     auto resolveMemberAccessNode(Parser::ParseNode node) -> var*;
@@ -87,4 +93,6 @@ private:
 
     std::vector<Parser::ParseTree> m_parseTrees;
     std::stack<ExecutionContext> m_executionStack;
+
+    var m_globalEnvironment{std::unordered_map<std::string, var>{}};
 };
