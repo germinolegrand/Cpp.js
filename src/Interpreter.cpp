@@ -374,7 +374,8 @@ auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
     std::vector<var> args;
     args.reserve(node.children() - 1);
     for(auto childNode = std::next(node.begin()); childNode != nextNode; ++childNode){
-        args.push_back(context().calculated.extract(childNode).mapped());
+        auto argVarNode = context().calculated.extract(childNode);
+        args.push_back(argVarNode ? argVarNode.mapped() : var::undefined);
     }
     auto lhs = context().calculated.extract(node.begin());
     try{

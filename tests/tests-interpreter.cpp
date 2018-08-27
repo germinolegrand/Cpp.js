@@ -113,4 +113,15 @@ TEST_CASE("Interpreter", "[interpreter]"){
 undefined
 )Interpreter");
     }
+    SECTION("Call operation with undefined arguments"){
+        is.str("console.log(x);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+undefined
+undefined
+)Interpreter");
+    }
 }

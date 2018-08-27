@@ -8,6 +8,8 @@
 
 #define ISSAME(T, U) std::is_same_v<std::decay_t<decltype(T)>, U>
 
+const var var::undefined{};
+
 var::var(std::string const& str):
     m_value(std::make_shared<var_t>(str))
 {}
@@ -207,7 +209,6 @@ var const& var::operator[](var property) const
         return it->second;
     }
 
-    static const var undefined{};
     return undefined;
 }
 

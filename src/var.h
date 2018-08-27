@@ -59,6 +59,8 @@ public:
     var const& operator[](var property) const;
     var const& operator[](char const* property) const { return operator[](var(property)); };
 
+    static const var undefined;
+
 private:
     using function_t = std::function<var(std::vector<var> args)>;
     using object_t = std::unordered_map<std::string, var>;
