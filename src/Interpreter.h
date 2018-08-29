@@ -74,7 +74,7 @@ private:
     auto execute_OPR_JsonObject                 (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_MemberAccess               (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Call                       (Parser::ParseNode node) -> CompletionRecord;
-    template<var(*operatorPtr)(var const&, var const&)>
+    template<auto operatorPtr>
     auto execute_OPR_BinaryOperation            (Parser::ParseNode node) -> CompletionRecord;
     template<var&(var::*operatorPtr)(var const&) = &var::operator= >
     auto execute_OPR_AssignmentOperation        (Parser::ParseNode node) -> CompletionRecord;

@@ -180,7 +180,7 @@ std::ostream& operator<<(std::ostream& os, ParseTree<T> const& tree)
 {
     int i = 0;
     for(auto& [lweight, value] : tree.m_tree){
-        os << std::string(i, '>') << lweight << ':' << value << '\n';
+        os << std::string(static_cast<std::string::size_type>(i), '>') << lweight << ':' << value << '\n';
         i += lweight;
     }
     return os;

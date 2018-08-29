@@ -118,7 +118,11 @@ double var::to_double() const
         } else if constexpr(ISSAME(arg, double)){
             return arg;
         } else if constexpr(ISSAME(arg, std::string)){
-            return std::stod(arg);
+            try{
+                return std::stod(arg);
+            }catch(std::invalid_argument&){
+                return NAN;
+            }
         } else if constexpr(ISSAME(arg, object_t)){
             if(auto it = arg.find("to_double");
                 it != end(arg) && it->second.is_callable()){
@@ -244,3 +248,20 @@ bool operator<(var const& leftHS, var const& rightHS){
     }
     return leftHS.to_double() < rightHS.to_double();
 }
+
+bool operator<=(var const& leftHS, var const& rightHS){
+    if(std::holds_alternative<std::string>(*leftHS.m_value)
+       && std::holds_alternative<std::string>(*rightHS.m_value)){
+        return leftHS.to_string() <= rightHS.to_string();
+    }
+    return leftHS.to_double() <= rightHS.to_double();
+}
+
+bool operator>=(var const& leftHS, var const& rightHS){
+    if(std::holds_alternative<std::string>(*leftHS.m_value)
+       && std::holds_alternative<std::string>(*rightHS.m_value)){
+        return leftHS.to_string() >= rightHS.to_string();
+    }
+    return leftHS.to_double() >= rightHS.to_double();
+}
+

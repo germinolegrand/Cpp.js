@@ -158,14 +158,14 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_BinaryOperation<operator>> >(node);
 //    case Operation::OPR_BitwiseUnsignedRightShift:
 //        return execute_OPR_BinaryOperation<operator>>> >(node);
-//    case Operation::OPR_LessThan:
-//        return execute_OPR_LessThan(node);
-//    case Operation::OPR_LessThanOrEqual:
-//        return execute_OPR_LessThanOrEqual(node);
-//    case Operation::OPR_GreaterThan:
-//        return execute_OPR_GreaterThan(node);
-//    case Operation::OPR_GreaterThanOrEqual:
-//        return execute_OPR_GreaterThanOrEqual(node);
+    case Operation::OPR_LessThan:
+        return execute_OPR_BinaryOperation<operator< >(node);
+    case Operation::OPR_LessThanOrEqual:
+        return execute_OPR_BinaryOperation<operator<= >(node);
+    case Operation::OPR_GreaterThan:
+        return execute_OPR_BinaryOperation<operator> >(node);
+    case Operation::OPR_GreaterThanOrEqual:
+        return execute_OPR_BinaryOperation<operator>= >(node);
 //    case Operation::OPR_In:
 //        return execute_OPR_In(node);
 //    case Operation::OPR_InstanceOf:
@@ -385,7 +385,7 @@ auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
     }
 }
 
-template<var(*operatorPtr)(var const&, var const&)>
+template<auto operatorPtr>
 auto Interpreter::execute_OPR_BinaryOperation(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){

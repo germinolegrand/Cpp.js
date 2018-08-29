@@ -124,4 +124,15 @@ undefined
 undefined
 )Interpreter");
     }
+    SECTION("Compare operations"){
+        is.str("console.log(1 < 1, 1 < 2, 2 > 1, 2 > 3, 3 <= 2, 3 <= 3, 3 <= '4', 5 >= 3, 5 >= 6, '5' >= '5');");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+falsetruetruefalsefalsetruetruetruefalsetrue
+undefined
+)Interpreter");
+    }
 }

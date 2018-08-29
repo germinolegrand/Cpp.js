@@ -33,6 +33,9 @@ public:
     friend var operator%(var const&, var const&);
 
     friend bool operator<(var const&, var const&);
+    friend bool operator>(var const&, var const&);
+    friend bool operator<=(var const&, var const&);
+    friend bool operator>=(var const&, var const&);
 
     var& operator+=(var const& o){ return *this = *this + o; }
     var& operator-=(var const& o){ return *this = *this - o; }
@@ -101,3 +104,6 @@ var operator/(var const&, var const&);
 var operator%(var const&, var const&);
 
 bool operator<(var const&, var const&);
+inline bool operator>(var const& a, var const& b){ return b < a; }
+bool operator<=(var const& a, var const& b);
+bool operator>=(var const& a, var const& b);

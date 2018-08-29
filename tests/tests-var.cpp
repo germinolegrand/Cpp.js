@@ -26,4 +26,10 @@ TEST_CASE("Var", "[var]"){
     var v = 2 < 1;
     os << v;
     CHECK(os.str() == "false");
+
+    var cmp_a = 4.;
+    var cmp_b = NAN;
+    CHECK((cmp_a < cmp_b) == false);
+    var cmp_c = "Not a number";
+    CHECK((cmp_a < cmp_c) == false);
 }
