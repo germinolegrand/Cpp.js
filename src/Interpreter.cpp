@@ -184,10 +184,10 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
 //        return execute_OPR_BitwiseXOR(node);
 //    case Operation::OPR_BitwiseOR:
 //        return execute_OPR_BitwiseOR(node);
-//    case Operation::OPR_LogicalAND:
-//        return execute_OPR_LogicalAND(node);
-//    case Operation::OPR_LogicalOR:
-//        return execute_OPR_LogicalOR(node);
+    case Operation::OPR_LogicalAND:
+        return execute_OPR_LogicalAND(node);
+    case Operation::OPR_LogicalOR:
+        return execute_OPR_LogicalOR(node);
 //    case Operation::OPR_Conditional:
 //        return execute_OPR_Conditional(node);
     case Operation::OPR_Assignment:
@@ -385,6 +385,48 @@ auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
     }
 }
 
+auto Interpreter::execute_OPR_LogicalAND(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        auto lhs = context().calculated.extract(node.begin());
+        if(!lhs){
+            return CompletionRecord::Normal();
+        }
+        if(lhs.mapped().to_bool() == false){
+            return CompletionRecord::Normal(lhs.mapped());
+        }
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(rhs ? rhs.mapped() : var{});
+}
+
+auto Interpreter::execute_OPR_LogicalOR(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        auto lhs = context().calculated.extract(node.begin());
+        if(!lhs){
+            return CompletionRecord::Normal();
+        }
+        if(lhs.mapped().to_bool() == true){
+            return CompletionRecord::Normal(lhs.mapped());
+        }
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    auto rhs = context().calculated.extract(std::next(node.begin()));
+    return CompletionRecord::Normal(rhs ? rhs.mapped() : var{});
+}
+
 template<auto operatorPtr>
 auto Interpreter::execute_OPR_BinaryOperation(Parser::ParseNode node) -> CompletionRecord
 {
@@ -398,7 +440,7 @@ auto Interpreter::execute_OPR_BinaryOperation(Parser::ParseNode node) -> Complet
     }
     auto lhs = context().calculated.extract(node.begin());
     auto rhs = context().calculated.extract(std::next(node.begin()));
-    return CompletionRecord::Normal((*operatorPtr)(lhs.mapped(), rhs.mapped()));
+    return CompletionRecord::Normal((*operatorPtr)(lhs ? lhs.mapped() : var{}, rhs ? rhs.mapped() : var{}));
 }
 
 template<var&(var::*operatorPtr)(var const&)>
@@ -440,7 +482,7 @@ auto Interpreter::execute_OPR_AssignmentOperation(Parser::ParseNode node) -> Com
         if(!lshPtr){
             return {CompletionRecord::Type::Throw, "ReferenceError", {}};
         }
-        ((*lshPtr).*(operatorPtr))(rhs.mapped());
+        ((*lshPtr).*(operatorPtr))(rhs ? rhs.mapped() : var{});
         return CompletionRecord::Normal(*lshPtr);
     }
     if(auto* operation = std::get_if<Parser::Operation>(&*lhsNode)){
@@ -449,7 +491,7 @@ auto Interpreter::execute_OPR_AssignmentOperation(Parser::ParseNode node) -> Com
             if(!lshPtr){
                 return {CompletionRecord::Type::Throw, "ReferenceError", {}};
             }
-            ((*lshPtr).*(operatorPtr))(rhs.mapped());
+            ((*lshPtr).*(operatorPtr))(rhs ? rhs.mapped() : var{});
             return CompletionRecord::Normal(*lshPtr);
         }
         if(*operation == Parser::Operation::OPR_JsonObject){
