@@ -95,6 +95,8 @@ auto Interpreter::execute_Statement(Parser::ParseNode node) -> CompletionRecord
         return execute_STM_Expression(node);
     case Statement::STM_Block:
         return execute_STM_Block(node);
+    case Statement::STM_Return:
+        return execute_STM_Return(node);
     default:
         throw unimplemented_error(std::get<Statement>(*node));
     }
@@ -110,8 +112,8 @@ auto Interpreter::execute_Operation(Parser::ParseNode node) -> CompletionRecord
         return execute_OPR_JsonObject(node);
 //    case Operation::OPR_ArrayObject:
 //        return execute_OPR_ArrayObject(node);
-//    case Operation::OPR_Function:
-//        return execute_OPR_Function(node);
+    case Operation::OPR_Function:
+        return execute_OPR_Function(node);
     case Operation::OPR_MemberAccess:
         return execute_OPR_MemberAccess(node);
 //    case Operation::OPR_New:
@@ -293,6 +295,19 @@ auto Interpreter::execute_STM_Block(Parser::ParseNode node) -> CompletionRecord
     return CompletionRecord::Normal();
 }
 
+auto Interpreter::execute_STM_Return(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        if(node.empty()){
+            return CompletionRecord{CompletionRecord::Type::Return, var::undefined, {}};
+        }
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    auto rhs = context().calculated.extract(node.begin());
+    return CompletionRecord{CompletionRecord::Type::Return, rhs ? rhs.mapped() : var::undefined, {}};
+}
+
 auto Interpreter::execute_OPR_Grouping(Parser::ParseNode node) -> CompletionRecord
 {
     if(context().previousNode == node.parent()){
@@ -332,6 +347,38 @@ auto Interpreter::execute_OPR_JsonObject(Parser::ParseNode node) -> CompletionRe
         obj.insert_or_assign(name.mapped().to_string(), std::move(value.mapped()));
     }
     return CompletionRecord::Normal(std::move(obj));
+}
+
+auto Interpreter::execute_OPR_Function(Parser::ParseNode node) -> CompletionRecord
+{
+    auto funcName = *node.begin();
+    auto funcCode = std::find_if(std::next(node.begin()), node.end(), [](auto& x){
+        auto* stmPtr = std::get_if<Parser::Statement>(&x);
+        return stmPtr && *stmPtr == Parser::Statement::STM_Block;
+    });
+    std::vector<std::string> funcParams;
+    for(auto it = std::next(node.begin()); it != funcCode; ++it){
+        funcParams.push_back(std::get<Parser::VarDecl>(*it).name);
+    }
+
+    return CompletionRecord::Normal(var{[funcCode, funcParams, this](std::vector<var> arguments) mutable{
+        var environment{{{"__proto__",m_globalEnvironment}}};
+        size_t i = 0;
+        for(auto& param : funcParams){
+            environment[param] = arguments.size() > i ? arguments[i++] : var::undefined;
+        }
+        ExecutionContext ctx {
+            Realm{},
+            var{},
+            environment,
+            funcCode,
+            funcCode,
+            funcCode.parent(),
+            {}
+        };
+        m_executionStack.push(std::move(ctx));
+        return var::undefined;
+    }});
 }
 
 auto Interpreter::execute_OPR_MemberAccess(Parser::ParseNode node) -> CompletionRecord
@@ -378,6 +425,9 @@ auto Interpreter::execute_OPR_Call(Parser::ParseNode node) -> CompletionRecord
         args.push_back(argVarNode ? argVarNode.mapped() : var::undefined);
     }
     auto lhs = context().calculated.extract(node.begin());
+    if(lhs.empty()){
+        return {CompletionRecord::Type::Throw, "ReferenceError", {}};
+    }
     try{
         return CompletionRecord::Normal(lhs.mapped().operator()(std::move(args)));
     }catch(unavailable_operation&){

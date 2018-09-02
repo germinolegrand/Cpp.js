@@ -135,4 +135,14 @@ falsetruetruefalsefalsetruetruetruefalsetrue
 undefined
 )Interpreter");
     }
+    SECTION("Function operation and Call"){
+        is.str("var g = function(x){ x += 2; return x; }; g(3);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+5
+)Interpreter");
+    }
 }

@@ -69,9 +69,11 @@ private:
     auto execute_STM_TranslationUnit            (Parser::ParseNode node) -> CompletionRecord;
     auto execute_STM_Expression                 (Parser::ParseNode node) -> CompletionRecord;
     auto execute_STM_Block                      (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_STM_Return                     (Parser::ParseNode node) -> CompletionRecord;
 
     auto execute_OPR_Grouping                   (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_JsonObject                 (Parser::ParseNode node) -> CompletionRecord;
+    auto execute_OPR_Function                   (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_MemberAccess               (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_Call                       (Parser::ParseNode node) -> CompletionRecord;
     auto execute_OPR_LogicalAND                 (Parser::ParseNode node) -> CompletionRecord;

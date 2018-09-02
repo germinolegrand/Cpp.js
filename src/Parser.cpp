@@ -551,7 +551,7 @@ bool Parser::parse_FunctionOperation(ParseNode tree, int opr_precedence)
     lex_expect(Lexer::Punctuator::PCT_parenthese_left);
     if(!lex_expect_optional(Lexer::Punctuator::PCT_parenthese_right)){
         do{
-            operation.append(lex_expect_identifier());
+            operation.append(VarDecl{lex_expect_identifier()});
         }while(lex_expect_optional(Lexer::Punctuator::PCT_comma));
         lex_expect(Lexer::Punctuator::PCT_parenthese_right);
     }
