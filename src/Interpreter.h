@@ -95,7 +95,7 @@ private:
 
     ExecutionContext& context(){ return m_executionStack.top(); }
 
-    std::vector<Parser::ParseTree> m_parseTrees;
+    std::vector<std::unique_ptr<Parser::ParseTree>> m_parseTrees;
     std::stack<ExecutionContext> m_executionStack;
 
     var m_globalEnvironment{std::unordered_map<std::string, var>{}};

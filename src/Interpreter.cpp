@@ -9,14 +9,14 @@ Interpreter::Interpreter()
 
 void Interpreter::feed(Parser::ParseTree tree)
 {
-    m_parseTrees.push_back(std::move(tree));
+    m_parseTrees.push_back(std::make_unique<Parser::ParseTree>(std::move(tree)));
     ExecutionContext ctx {
         Realm{},
         var{},
         m_globalEnvironment,
-        m_parseTrees.back().root(),
-        m_parseTrees.back().root(),
-        m_parseTrees.back().root(),
+        m_parseTrees.back()->root(),
+        m_parseTrees.back()->root(),
+        m_parseTrees.back()->root(),
         {}
     };
     m_executionStack.push(std::move(ctx));
