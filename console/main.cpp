@@ -32,11 +32,15 @@ int main()
     while(true){
         std::cout << "Cpp.js> " << std::flush;
         try{
-            interpreter.feed(parser.parse());
+            Parser::ParseTree translation_unit(Parser::Statement::STM_TranslationUnit);
+            do{
+                parser.parse_append(translation_unit);
+            }while(std::cin.peek() != '\n');
+            interpreter.feed(std::move(translation_unit));
         }catch(std::invalid_argument& e){
             std::cout << '\n' << "ParseError: " << e.what() << '\n';
             std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max());
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             continue;
         }
         try{

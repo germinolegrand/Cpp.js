@@ -152,6 +152,7 @@ public:
     using ParseNode = ParseTree::Node;
 
     ParseTree parse();
+    void parse_append(ParseNode tree);
 
 private:
     using Lexem = Lexer::Lexem;

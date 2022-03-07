@@ -79,12 +79,17 @@ auto Parser::parse() -> ParseTree
     ParseTree tree(Statement::STM_TranslationUnit);
 
     while(!lex_expect_optional(Lexer::Symbol::SBL_EOF)){
-        if(!parse_Statement(tree)){
-            expected("Statement"s, lex());
-        }
+        parse_append(tree);
     }
 
     return tree;
+}
+
+void Parser::parse_append(ParseNode tree)
+{
+    if(!parse_Statement(tree)){
+        expected("Statement"s, lex());
+    }
 }
 
 bool Parser::parse_Statement(ParseNode tree)
