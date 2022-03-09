@@ -34,9 +34,12 @@ var::var(function_t f):
     m_value(std::make_shared<var_t>(std::move(f)))
 {}
 
-var::var(object_t p):
-    m_value(std::make_shared<var_t>(std::move(p)))
+var::var(std::unordered_map<std::string, var> p, var prototype) try :
+    m_value(std::make_shared<var_t>(object_t{((prototype.is_null() || prototype.is_undefined()) ? nullptr : prototype), std::move(p)}))
 {}
+catch(std::bad_variant_access&){
+    throw std::invalid_argument("TypeError: Object prototype may only be an Object or null: " + prototype.to_string());
+}
 
 
 bool var::is_undefined() const
@@ -46,7 +49,7 @@ bool var::is_undefined() const
 
 bool var::is_null() const
 {
-    return m_value && std::holds_alternative<bool>(*m_value);
+    return m_value && std::holds_alternative<std::nullptr_t>(*m_value);
 }
 
 bool var::is_callable() const
@@ -79,7 +82,7 @@ std::string var::to_string() const
         } else if constexpr(ISSAME(arg, object_t)){
             std::stringstream strstr;
             strstr << '{';
-            for(auto& [key, value]: arg){
+            for(auto& [key, value]: arg.properties){
                 strstr << std::quoted(key);
                 strstr << ':';
                 if(value.m_value && std::holds_alternative<std::string>(*value.m_value)){
@@ -124,9 +127,9 @@ double var::to_double() const
                 return NAN;
             }
         } else if constexpr(ISSAME(arg, object_t)){
-            if(auto it = arg.find("to_double");
-                it != end(arg) && it->second.is_callable()){
-                return (it->second)().to_double();
+            if(auto propToDouble = findProperty(arg, "to_double");
+                propToDouble && propToDouble->is_callable()){
+                return (*propToDouble)().to_double();
             }
             return 0;
         } else throw unavailable_operation();
@@ -148,9 +151,9 @@ bool var::to_bool() const
         } else if constexpr(ISSAME(arg, std::string)){
             return !arg.empty();
         } else if constexpr(ISSAME(arg, object_t)){
-            if(auto it = arg.find("to_bool");
-                it != end(arg) && it->second.is_callable()){
-                return (it->second)().to_bool();
+            if(auto propToBool = findProperty(arg, "to_bool");
+                propToBool && propToBool->is_callable()){
+                return (*propToBool)().to_double();
             }
             return true;
         } else throw unavailable_operation();
@@ -167,9 +170,9 @@ var var::operator()(std::vector<var> args)
     }
 
     if(auto obj = std::get_if<object_t>(&*m_value); obj){
-        if(auto it = obj->find("operator()");
-            it != end(*obj) && it->second.is_callable()){
-            return it->second(std::move(args));
+        if(auto oprCall = findProperty(*obj, "operator()");
+                oprCall && oprCall->is_callable()){
+            return (*oprCall)(std::move(args));
         }
     }
 
@@ -181,19 +184,24 @@ var& var::operator[](var property)
     if(!m_value)
         throw undefined_value();
 
-    auto obj = std::get_if<object_t>(&*m_value);
+    var_t& value = *m_value;
+
+    auto obj = std::get_if<object_t>(&value);
+    if(!obj){
+        //obj = s_getPrototype(value);
+    }
 
     if(!obj)
         throw unavailable_operation();
 
     auto prop_str = property.to_string();
 
-    if(auto it = obj->find(prop_str);
-        it != end(*obj)){
-        return it->second;
+    auto foundProp = findProperty(*obj, prop_str);
+    if(foundProp){
+        return *foundProp;
     }
 
-    return obj->emplace(std::move(prop_str), var{}).first->second;
+    return obj->properties.emplace(std::move(prop_str), var{}).first->second;
 }
 
 var const& var::operator[](var property) const
@@ -208,12 +216,24 @@ var const& var::operator[](var property) const
 
     auto prop_str = property.to_string();
 
-    if(auto it = obj->find(prop_str);
-        it != end(*obj)){
-        return it->second;
+    auto foundProp = findProperty(*obj, prop_str);
+    if(foundProp){
+        return *foundProp;
     }
 
     return undefined;
+}
+
+auto var::findProperty(object_t& obj, std::string const& propertyName) -> var*
+{
+    for(object_t* proto = &obj; proto != nullptr; ){
+        if(auto it = proto->properties.find(propertyName);
+            it != end(proto->properties)){
+            return &it->second;
+        }
+        proto = std::get_if<object_t>(proto->prototype.m_value.get());
+    }
+    return nullptr;
 }
 
 

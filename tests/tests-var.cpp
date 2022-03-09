@@ -33,3 +33,13 @@ TEST_CASE("Var", "[var]"){
     var cmp_c = "Not a number";
     CHECK((cmp_a < cmp_c) == false);
 }
+
+TEST_CASE("Var with prototype", "[var]"){
+    std::ostringstream os;
+
+    var a{{{"foo", "FOO"}}};
+    var b{{{"bar", "BAR"}}, a};
+
+    os << b["foo"];
+    CHECK(os.str() == "FOO");
+}

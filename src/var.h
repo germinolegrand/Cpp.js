@@ -19,7 +19,7 @@ public:
     var(bool b);
     var(std::nullptr_t);
     var(std::function<var(std::vector<var> args)>);
-    var(std::unordered_map<std::string, var>);
+    var(std::unordered_map<std::string, var> properties, var prototype = nullptr);
     // Plain function pointers convert to bool if not explicitely overloaded
     template<class T, class...Args>
     var(T(*lambda)(Args...)):var(std::function<T(Args...)>(lambda)){}
@@ -66,7 +66,14 @@ public:
 
 private:
     using function_t = std::function<var(std::vector<var> args)>;
-    using object_t = std::unordered_map<std::string, var>;
+
+    template<class T>
+    struct objectT
+    {
+        T prototype;
+        std::unordered_map<std::string, T> properties;
+    };
+    using object_t = objectT<var>;
 
     using var_t = std::variant<
         std::nullptr_t,
@@ -78,6 +85,8 @@ private:
         object_t>;
 
     std::shared_ptr<var_t> m_value;
+
+    static var* findProperty(object_t& obj, std::string const& propertyName);
 };
 
 inline std::ostream& operator<<(std::ostream& os, var const& v)
