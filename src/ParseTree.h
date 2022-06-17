@@ -57,6 +57,7 @@ public:
         NodeBase append(T&& child);
         NodeBase append(T const& child);
         NodeBase append(NodeBase&& child);
+        NodeBase append_copy(NodeBase const& other);
         NodeBase prepend(T&& child);
         void clear_children();
         NodeBase remove();
@@ -100,9 +101,11 @@ public:
     using ConstNode = typename ParseTree::template NodeBase<true>;
 
     ParseTree() = default;
+    ParseTree(ParseTree const&) = default;
     ParseTree(T&&);
     ParseTree(Node&&);
     ParseTree(ConstNode const&);
+
 
     operator Node(){ return root(); }
     operator ConstNode(){ return root(); }
@@ -451,6 +454,46 @@ auto ParseTree<T>::NodeBase<Const>::append(NodeBase&& child) -> NodeBase
                              std::make_move_iterator(childSrcBegIt),
                              std::make_move_iterator(childSrcEndIt));
     child.remove();
+
+    auto lastChildDestIt = std::next(it, childSrcSize - 1);
+    lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + dweight - 1;
+
+    auto prevIt = std::prev(it);
+    prevIt->first -= dweight - 1;
+
+    return {m_tree, get_index(it)};
+}
+
+/**
+    @note invalidates all iterators after insertion point
+    @return the node of the appended child
+    @throw strong exception-garantee if CopyAssignation of T does not throw
+**/
+template<class T> template<bool Const>
+auto ParseTree<T>::NodeBase<Const>::append_copy(NodeBase const& child) -> NodeBase
+{
+    static_assert(!Const, "not possible on ConstNode");
+
+    auto childSrcBegIt = child.get(child.m_index);
+    auto childSrcEndIt = child.get(child.end().m_index);
+    auto childSrcSize = std::distance(childSrcBegIt, childSrcEndIt);
+    auto childSrcDeepWeight = child.deep_weight();
+
+    int const lweight = weight();
+    if(lweight <= 0){
+        auto it = m_tree->insert(std::next(get()), childSrcBegIt, childSrcEndIt);
+
+        auto lastChildDestIt = std::next(it, childSrcSize - 1);
+        lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + lweight - 1;
+
+        get()->first = 1;
+        return {m_tree, get_index(it)};
+    }
+
+    auto endIt = get(end().m_index);
+    int const dweight = deep_weight();
+
+    auto it = m_tree->insert(endIt, childSrcBegIt, childSrcEndIt);
 
     auto lastChildDestIt = std::next(it, childSrcSize - 1);
     lastChildDestIt->first = lastChildDestIt->first - childSrcDeepWeight + dweight - 1;

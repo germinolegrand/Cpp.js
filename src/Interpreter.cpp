@@ -360,20 +360,36 @@ auto Interpreter::execute_OPR_Function(Parser::ParseNode node) -> CompletionReco
     for(auto it = std::next(node.begin()); it != funcCode; ++it){
         funcParams.push_back(std::get<Parser::VarDecl>(*it).name);
     }
+//    std::vector<std::string> captureList = computeCaptureList(funcCode, funcName, funcParams);
+//    std::vector<var> captureValues;
+//    captureValues.reserve(captureList);
+//    for(auto& captName : captureList){
+//        var* captValue = resolveBinding(captName, context().environment);
+//        if(captValue == nullptr){
+//            return {CompletionRecord::Type::Throw, "CaptureError", };
+//        }
+//        captureValues.push_back(*captValue);
+//    }
 
-    return CompletionRecord::Normal(var{[funcCode, funcParams, this](std::vector<var> arguments) mutable{
-        var environment{{{"__proto__",m_globalEnvironment}}};
+    Parser::ParseTree funcTree{Parser::Statement::STM_TranslationUnit};
+    funcTree.root().append_copy(funcCode);
+
+    return CompletionRecord::Normal(var{[funcTree = std::move(funcTree), funcParams, this](std::vector<var> arguments) mutable{
+        var environment{{}, m_globalEnvironment};
         size_t i = 0;
         for(auto& param : funcParams){
             environment[param] = arguments.size() > i ? arguments[i++] : var::undefined;
         }
+        // make a copy of the code tree
+        m_parseTrees.push_back(std::make_unique<Parser::ParseTree>(funcTree));
+        auto funcCode = m_parseTrees.back()->root();
         ExecutionContext ctx {
             Realm{},
             var{},
             environment,
             funcCode,
             funcCode,
-            funcCode.parent(),
+            funcCode,
             {}
         };
         m_executionStack.push(std::move(ctx));

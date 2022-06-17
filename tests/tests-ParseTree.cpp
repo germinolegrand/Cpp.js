@@ -62,3 +62,75 @@ R"(
 )");
     os.str("");
 }
+
+TEST_CASE("ParseTree-AppendMove", "[ParseTree]"){
+    ParseTree<std::string> tree("root");
+    tree.root().append("child0").append("child1").append("child2");
+    tree.at(0).append("child10");
+    std::ostringstream os;
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+>1:child0
+>>1:child1
+>>>-1:child2
+>>-3:child10
+)");
+    os.str("");
+    ParseTree<std::string> second_tree("root2");
+    second_tree.root().append(tree.at(0, 0));
+    os << '\n' << second_tree;
+    CHECK(os.str() ==
+R"(
+1:root2
+>1:child1
+>>-3:child2
+)");
+    os.str("");
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+>1:child0
+>>-3:child10
+)");
+    os.str("");
+}
+
+TEST_CASE("ParseTree-AppendCopy", "[ParseTree]"){
+    ParseTree<std::string> tree("root");
+    tree.root().append("child0").append("child1").append("child2");
+    tree.at(0).append("child10");
+    std::ostringstream os;
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+>1:child0
+>>1:child1
+>>>-1:child2
+>>-3:child10
+)");
+    os.str("");
+    ParseTree<std::string> second_tree("root2");
+    second_tree.root().append_copy(tree.at(0, 0));
+    os << '\n' << second_tree;
+    CHECK(os.str() ==
+R"(
+1:root2
+>1:child1
+>>-3:child2
+)");
+    os.str("");
+    os << '\n' << tree;
+    CHECK(os.str() ==
+R"(
+1:root
+>1:child0
+>>1:child1
+>>>-1:child2
+>>-3:child10
+)");
+    os.str("");
+}
