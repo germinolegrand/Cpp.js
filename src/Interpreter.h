@@ -95,6 +95,8 @@ private:
 
     ExecutionContext& context(){ return m_executionStack.top(); }
 
+    friend std::ostream& operator<<(std::ostream& out, Interpreter const& interpreter);
+
     std::vector<std::unique_ptr<Parser::ParseTree>> m_parseTrees;
     std::stack<ExecutionContext> m_executionStack;
 

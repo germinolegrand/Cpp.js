@@ -12,6 +12,8 @@ int main()
     Parser parser{lexer};
     Interpreter interpreter;
 
+    bool debug_parsetree = false;
+
     interpreter.globalEnvironment() = var{{
         {"console", {{
             {"log", var(
@@ -26,6 +28,16 @@ int main()
             [](auto args)->var{
                 exit(args.size() >= 1 ? static_cast<int>(args[0].to_double()) : 0);
             })
+        },
+        {"debug", var(
+            [&interpreter, &debug_parsetree](auto args)->var{
+                if(args.size() >= 1){
+                    debug_parsetree = args[0].to_bool();
+                }else{
+                    std::cout << interpreter;
+                }
+                return var{};
+            })
         }
     }};
 
@@ -36,6 +48,9 @@ int main()
             do{
                 parser.parse_append(translation_unit);
             }while(std::cin.peek() != '\n');
+            if(debug_parsetree){
+                std::cout << translation_unit;
+            }
             interpreter.feed(std::move(translation_unit));
         }catch(std::invalid_argument& e){
             std::cout << '\n' << "ParseError: " << e.what() << '\n';

@@ -1,5 +1,6 @@
 #include "Interpreter.h"
 
+#include <cassert>
 #include <iostream>
 
 Interpreter::Interpreter()
@@ -27,15 +28,11 @@ var Interpreter::execute()
     auto& ctx = m_executionStack.top();
     ctx.currentNode = ctx.code;
     ctx.previousNode = ctx.currentNode;
-    auto endNode = ctx.code.end();
-    while(ctx.currentNode != endNode){
-        execute_step();
+    CompletionRecord cr;
+    while(!m_executionStack.empty()){
+        cr = execute_step();
     }
-    try{
-        return ctx.calculated.at(ctx.code);
-    }catch(...){
-        return {};
-    }
+    return cr.value;
 }
 
 auto Interpreter::execute_step() -> CompletionRecord
@@ -53,10 +50,12 @@ auto Interpreter::execute_step() -> CompletionRecord
         }
     } else if(cr.type == CompletionRecord::Type::Return) {
         m_executionStack.pop();
-        auto& parentCtx = m_executionStack.top();
-        parentCtx.calculated.insert_or_assign(parentCtx.currentNode, cr.value);
-        parentCtx.previousNode = parentCtx.currentNode;
-        parentCtx.currentNode = parentCtx.currentNode.parent();
+        if(!m_executionStack.empty()){
+            auto& parentCtx = m_executionStack.top();
+            parentCtx.calculated.insert_or_assign(parentCtx.currentNode, cr.value);
+            parentCtx.previousNode = parentCtx.currentNode;
+            parentCtx.currentNode = parentCtx.currentNode.parent();
+        }
     } else if(cr.type == CompletionRecord::Type::Break) {
         throw unimplemented_error("CompletionRecord::Type::Break");
     } else if(cr.type == CompletionRecord::Type::Continue) {
@@ -82,6 +81,7 @@ auto Interpreter::execute_Node(Parser::ParseNode node) -> CompletionRecord
     if(std::holds_alternative<Parser::VarDecl>(nodeVal)){
         return execute_VarDecl(node);
     }
+    assert(std::holds_alternative<Parser::Literal>(nodeVal));
     return {CompletionRecord::Type::Normal, std::get<Parser::Literal>(*node), {}};
 }
 
@@ -261,8 +261,11 @@ auto Interpreter::execute_STM_TranslationUnit(Parser::ParseNode node) -> Complet
     }
     context().currentNode = std::next(context().previousNode);
 
-    movePreviousCalculated(node, true);
+    var result = movePreviousCalculated(node, true);
 
+    if(context().currentNode == node.end()) {
+        return {CompletionRecord::Type::Return, result, {}};
+    }
     return CompletionRecord::Normal();
 }
 
@@ -686,4 +689,65 @@ var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAl
     }
     auto irt = context().calculated.insert(std::move(valueNodeHandle));
     return irt.position->second;
+}
+
+
+namespace {
+
+template<typename Tag, typename Tag::type M>
+struct Rob {
+    friend typename Tag::type get(Tag) {
+        return M;
+    }
+};
+
+struct ParseNodeRobber {
+    typedef std::vector<std::pair<int, Parser::ParseResult>> * Parser::ParseNode::*type;
+    friend type get(ParseNodeRobber);
+};
+template struct Rob<ParseNodeRobber, &Parser::ParseNode::m_tree>;
+
+struct ParseNodeIndexRobber {
+    typedef std::vector<std::pair<int, Parser::ParseResult>>::difference_type Parser::ParseNode::*type;
+    friend type get(ParseNodeIndexRobber);
+};
+template struct Rob<ParseNodeIndexRobber, &Parser::ParseNode::m_index>;
+
+
+template<class T>
+struct StackInspector: public std::stack<T>
+{
+    using std::stack<T>::c;
+};
+template<class T>
+static StackInspector<T> const& inspect(std::stack<T> const& s){ return *static_cast<StackInspector<T> const*>(&s); }
+
+}
+
+std::ostream& operator<<(std::ostream& out, Interpreter const& interpreter) {
+    out << "=== ParseTrees ===\n";
+    for(auto& pt : interpreter.m_parseTrees){
+        out << *pt;
+    }
+    out << "=== Stack ===\n";
+    for(auto& exec : inspect(interpreter.m_executionStack).c){
+        out << "ExecutionContext{\n";
+        out << "environment: " << exec.environment << "\n";
+        auto tree = exec.code.*get(ParseNodeRobber());
+        {
+            int i = 0;
+            for(auto& [lweight, value] : *tree){
+                out << std::string(static_cast<std::string::size_type>(i), '>') << lweight << ':' << value << '\n';
+                i += lweight;
+            }
+        }
+        out << "calculated: {";
+        for(auto& [parseNode, value] : exec.calculated){
+            out << parseNode.*get(ParseNodeIndexRobber()) << ":" << value << ",";
+        }
+        out << "}\n";
+        out << "}\n";
+    }
+    out << "GlobalEnvironment: " << interpreter.m_globalEnvironment << "\n";
+    return out;
 }
