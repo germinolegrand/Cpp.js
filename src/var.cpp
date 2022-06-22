@@ -238,6 +238,9 @@ auto var::findProperty(object_t& obj, std::string const& propertyName) -> var*
 
 
 var operator+(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     if(std::holds_alternative<std::string>(*leftHS.m_value)
        || std::holds_alternative<std::string>(*rightHS.m_value)){
         return leftHS.to_string() + rightHS.to_string();
@@ -246,22 +249,37 @@ var operator+(var const& leftHS, var const& rightHS){
 }
 
 var operator-(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     return leftHS.to_double() - rightHS.to_double();
 }
 
 var operator*(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     return leftHS.to_double() * rightHS.to_double();
 }
 
 var operator/(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     return leftHS.to_double() / rightHS.to_double();
 }
 
 var operator%(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     return std::fmod(leftHS.to_double(), rightHS.to_double());
 }
 
 bool operator<(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     if(std::holds_alternative<std::string>(*leftHS.m_value)
        && std::holds_alternative<std::string>(*rightHS.m_value)){
         return leftHS.to_string() < rightHS.to_string();
@@ -270,6 +288,9 @@ bool operator<(var const& leftHS, var const& rightHS){
 }
 
 bool operator<=(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     if(std::holds_alternative<std::string>(*leftHS.m_value)
        && std::holds_alternative<std::string>(*rightHS.m_value)){
         return leftHS.to_string() <= rightHS.to_string();
@@ -278,6 +299,9 @@ bool operator<=(var const& leftHS, var const& rightHS){
 }
 
 bool operator>=(var const& leftHS, var const& rightHS){
+    if(!leftHS.m_value || !rightHS.m_value){
+        throw undefined_value();
+    }
     if(std::holds_alternative<std::string>(*leftHS.m_value)
        && std::holds_alternative<std::string>(*rightHS.m_value)){
         return leftHS.to_string() >= rightHS.to_string();

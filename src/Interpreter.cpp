@@ -52,9 +52,7 @@ auto Interpreter::execute_step() -> CompletionRecord
         m_executionStack.pop();
         if(!m_executionStack.empty()){
             auto& parentCtx = m_executionStack.top();
-            parentCtx.calculated.insert_or_assign(parentCtx.currentNode, cr.value);
-            parentCtx.previousNode = parentCtx.currentNode;
-            parentCtx.currentNode = parentCtx.currentNode.parent();
+            parentCtx.calculated.insert_or_assign(parentCtx.previousNode, cr.value);
         }
     } else if(cr.type == CompletionRecord::Type::Break) {
         throw unimplemented_error("CompletionRecord::Type::Break");

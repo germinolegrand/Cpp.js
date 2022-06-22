@@ -145,4 +145,25 @@ undefined
 5
 )Interpreter");
     }
+    SECTION("Call and VarDecl"){
+        is.str("var g = function(){ return 42; }; var h = g(); console.log(h);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+42
+undefined
+)Interpreter");
+    }
+    SECTION("Function generator"){
+        is.str("var g = function(){ return function(){ return 42; }; }; var h = g(); h();");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+42
+)Interpreter");
+    }
 }
