@@ -575,4 +575,17 @@ TEST_CASE("Parser", "[parser]"){
 >>>>-5:Literal(4)
 )Parser");
     }
+    SECTION("Mixed Grouping and Call"){
+        is.str("(g());");
+        auto tree = parser.parse();
+
+        os << '\n' << tree;
+        CHECK(os.str() == R"Parser(
+1:Statement(0:TranslationUnit)
+>1:Statement(1:Expression)
+>>1:Operation(1300:Grouping)
+>>>1:Operation(1100:Call)
+>>>>-5:VarUse(name:g)
+)Parser");
+    }
 }

@@ -423,7 +423,7 @@ auto Parser::parse_binaryRLOperation(Lexem lxm, Operation opr, ParseNode tree, i
     }
     if(opr_precedence > 0){
         auto treeOpr = std::get_if<Operation>(&*tree);
-        if(treeOpr && *treeOpr != Operation::OPR_Grouping  && precedence(*treeOpr) > precedence(opr)){
+        if(treeOpr && *treeOpr != Operation::OPR_Grouping && precedence(*treeOpr) > precedence(opr)){
             return std::nullopt;
         }
     }
@@ -619,7 +619,7 @@ bool Parser::parse_CallOperation(ParseNode tree, int opr_precedence)
     }
     if(opr_precedence > 0){
         auto treeOpr = std::get_if<Operation>(&*tree);
-        if(treeOpr && precedence(*treeOpr) > precedence(Operation::OPR_Call)){
+        if(treeOpr && *treeOpr != Operation::OPR_Grouping && precedence(*treeOpr) > precedence(Operation::OPR_Call)){
             return false;
         }
     }
