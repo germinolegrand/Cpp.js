@@ -361,22 +361,22 @@ auto Interpreter::execute_OPR_Function(Parser::ParseNode node) -> CompletionReco
     for(auto it = std::next(node.begin()); it != funcCode; ++it){
         funcParams.push_back(std::get<Parser::VarDecl>(*it).name);
     }
-//    std::vector<std::string> captureList = computeCaptureList(funcCode, funcName, funcParams);
-//    std::vector<var> captureValues;
-//    captureValues.reserve(captureList);
+//    std::vector<std::string> captureList = computeCaptureList(funcCode, std::get<Parser::Literal>(funcName).to_string(), funcParams);
+//    std::unordered_map<std::string, var> captureValues;
 //    for(auto& captName : captureList){
 //        var* captValue = resolveBinding(captName, context().environment);
 //        if(captValue == nullptr){
-//            return {CompletionRecord::Type::Throw, "CaptureError", };
+//            return {CompletionRecord::Type::Throw, "CaptureError", {}};
 //        }
-//        captureValues.push_back(*captValue);
+//        captureValues.emplace(captName, *captValue);
 //    }
 
     Parser::ParseTree funcTree{Parser::Statement::STM_TranslationUnit};
     funcTree.root().append_copy(funcCode);
 
-    return CompletionRecord::Normal(var{[funcTree = std::move(funcTree), funcParams, this](std::vector<var> arguments) mutable{
-        var environment{{}, m_globalEnvironment};
+    return CompletionRecord::Normal(var{[funcTree = std::move(funcTree), funcParams, capturedEnv = context().environment, this](std::vector<var> arguments) mutable{
+        var environment{{}, capturedEnv};
+
         size_t i = 0;
         for(auto& param : funcParams){
             environment[param] = arguments.size() > i ? arguments[i++] : var::undefined;
@@ -687,6 +687,66 @@ var Interpreter::movePreviousCalculated(Parser::ParseNode node, bool replaceIfAl
     }
     auto irt = context().calculated.insert(std::move(valueNodeHandle));
     return irt.position->second;
+}
+
+auto Interpreter::computeCaptureList(Parser::ParseNode funcCode, std::string const& funcName, std::vector<std::string> funcParams) const -> std::vector<std::string>
+{
+    std::vector<std::string> captureList;
+    std::vector<std::vector<std::string>> knownNames;
+    funcParams.push_back(funcName);
+    knownNames.push_back(funcParams);
+
+    auto isKnown = [&captureList, &knownNames](std::string const& name){
+        if(std::find(std::begin(captureList), std::end(captureList), name) != std::end(captureList)){
+            return true;
+        }
+        for(auto &kn : knownNames){
+            if(std::find(std::begin(kn), std::end(kn), name) != std::end(kn)){
+                return true;
+            }
+        }
+        return false;
+    };
+
+    auto computeFuncKnownList = [](Parser::ParseNode funcNode){
+        std::vector<std::string> knownNames;
+        knownNames.push_back(std::get<Parser::Literal>(*funcNode.begin()).to_string());
+        auto funcCode = funcNode.last_child();
+        for(auto it = std::next(funcNode.begin()); it != funcCode; ++it){
+            knownNames.push_back(std::get<Parser::VarDecl>(*it).name);
+        }
+        return knownNames;
+    };
+
+    auto funcEnd = funcCode.end();
+    for(auto node = funcCode.begin(); node != funcEnd;){
+        if(auto* vd = std::get_if<Parser::VarDecl>(&*node); vd){
+            knownNames.rbegin()->push_back(vd->name);
+        } else if(auto* vu = std::get_if<Parser::VarUse>(&*node); vu){
+            if(!isKnown(vu->name)){
+                captureList.push_back(vu->name);
+            }
+        } else if(auto* fo = std::get_if<Parser::Operation>(&*node); fo && *fo == Parser::Operation::OPR_Function){
+            knownNames.push_back(computeFuncKnownList(node));
+            node = node.last_child();
+        }
+
+        if(node.children() > 0){
+            node = node.begin();
+        } else {
+            auto nextNode = std::next(node);
+            if(nextNode == funcEnd){ break; }
+            for(auto nodeParent = node.parent(), nextNodeParent = nextNode.parent();
+                    nodeParent != nextNodeParent; nodeParent = nodeParent.parent()){
+                if(auto* fo = std::get_if<Parser::Operation>(&*nodeParent); fo && *fo == Parser::Operation::OPR_Function){
+                    knownNames.pop_back();
+                }
+            }
+            node = nextNode;
+        }
+    }
+
+    return captureList;
 }
 
 

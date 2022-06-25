@@ -166,4 +166,14 @@ undefined
 42
 )Interpreter");
     }
+    SECTION("Function capture"){
+        is.str("var g = function(x){ return function(y){ return x + y; }; }; g(3)(4);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+7
+)Interpreter");
+    }
 }

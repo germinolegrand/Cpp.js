@@ -93,6 +93,8 @@ private:
 
     var movePreviousCalculated(Parser::ParseNode node, bool replaceIfAlreadyExists = false);
 
+    auto computeCaptureList(Parser::ParseNode funcCode, std::string const& funcName, std::vector<std::string> funcParams) const -> std::vector<std::string>;
+
     ExecutionContext& context(){ return m_executionStack.top(); }
 
     friend std::ostream& operator<<(std::ostream& out, Interpreter const& interpreter);
