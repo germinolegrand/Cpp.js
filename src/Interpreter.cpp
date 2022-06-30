@@ -93,6 +93,8 @@ auto Interpreter::execute_Statement(Parser::ParseNode node) -> CompletionRecord
         return execute_STM_Expression(node);
     case Statement::STM_Block:
         return execute_STM_Block(node);
+    case Statement::STM_If:
+        return execute_STM_If(node);
     case Statement::STM_Return:
         return execute_STM_Return(node);
     default:
@@ -293,6 +295,25 @@ auto Interpreter::execute_STM_Block(Parser::ParseNode node) -> CompletionRecord
     } else {
         movePreviousCalculated(node);
     }
+    return CompletionRecord::Normal();
+}
+
+auto Interpreter::execute_STM_If(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        var condition = context().calculated.extract(node.begin()).mapped();
+        if(condition.to_bool() == true){
+            context().currentNode = std::next(node.begin(), 1);
+        } else if(node.children() == 3) {
+            context().currentNode = std::next(node.begin(), 2);
+        }
+        return CompletionRecord::Normal();
+    }
+    movePreviousCalculated(node);
     return CompletionRecord::Normal();
 }
 

@@ -176,4 +176,16 @@ undefined
 7
 )Interpreter");
     }
+    SECTION("If-Else"){
+        is.str("var a = 35; if(a > 30){ console.log(a, ' greater than 30'); } if(a > 40){ console.log(a, ' greater than 40'); } else { console.log(a, ' less than or eq to 40'); }");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+35 greater than 30
+35 less than or eq to 40
+undefined
+)Interpreter");
+    }
 }
