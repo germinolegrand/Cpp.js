@@ -188,4 +188,38 @@ undefined
 undefined
 )Interpreter");
     }
+    SECTION("While"){
+        is.str("var a = 35; while(a > 0){ a -= 5; console.log(a); }");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+30
+25
+20
+15
+10
+5
+0
+undefined
+)Interpreter");
+    }
+    SECTION("DoWhile"){
+        is.str("var a = 35; do{ a -= 5; console.log(a); }while(a > 0);");
+        auto tree = parser.parse();
+        interpreter.feed(tree);
+
+        os << '\n' << interpreter.execute() << '\n';
+        CHECK(os.str() == R"Interpreter(
+30
+25
+20
+15
+10
+5
+0
+undefined
+)Interpreter");
+    }
 }

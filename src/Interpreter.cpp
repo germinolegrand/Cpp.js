@@ -95,6 +95,10 @@ auto Interpreter::execute_Statement(Parser::ParseNode node) -> CompletionRecord
         return execute_STM_Block(node);
     case Statement::STM_If:
         return execute_STM_If(node);
+    case Statement::STM_While:
+        return execute_STM_While(node);
+    case Statement::STM_DoWhile:
+        return execute_STM_DoWhile(node);
     case Statement::STM_Return:
         return execute_STM_Return(node);
     default:
@@ -314,6 +318,36 @@ auto Interpreter::execute_STM_If(Parser::ParseNode node) -> CompletionRecord
         return CompletionRecord::Normal();
     }
     movePreviousCalculated(node);
+    return CompletionRecord::Normal();
+}
+
+auto Interpreter::execute_STM_While(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.begin()){
+        var condition = context().calculated.extract(node.begin()).mapped();
+        if(condition.to_bool() == true){
+            context().currentNode = std::next(node.begin());
+        }
+        return CompletionRecord::Normal();
+    }
+    context().currentNode = node.begin();
+    return CompletionRecord::Normal();
+}
+
+auto Interpreter::execute_STM_DoWhile(Parser::ParseNode node) -> CompletionRecord
+{
+    if(context().previousNode == node.parent()){
+        context().currentNode = node.begin();
+        return CompletionRecord::Normal();
+    }
+    if(context().previousNode == node.begin()){
+        context().currentNode = std::next(node.begin());
+        return CompletionRecord::Normal();
+    }
+    var condition = context().calculated.extract(context().previousNode).mapped();
+    if(condition.to_bool() == true){
+        context().currentNode = node.begin();
+    }
     return CompletionRecord::Normal();
 }
 
